@@ -1,0 +1,64 @@
+# Dataset de Seguridad para YOLO11
+# Clases: rejas abiertas/cerradas, personas autorizadas/no autorizadas, vehículos
+
+# Rutas del dataset
+path: /security_project/data  # Ruta base del dataset
+train: train/images  # Imágenes de entrenamiento
+val: val/images      # Imágenes de validación
+test: test/images    # Imágenes de prueba (opcional)
+
+# Clases
+nc: 7  # Número de clases
+names:
+  0: gate_open
+  1: gate_closed
+  2: authorized_person
+  3: unauthorized_person
+  4: truck
+  5: car
+  6: motorcycle
+
+# Configuración de entrenamiento
+train_config:
+  epochs: 150
+  batch_size: 12
+  imgsz: 640
+  patience: 30
+  device: mps  # Para M3 Pro
+  workers: 6
+  cache: true
+  
+# Augmentation para rejas (estructuras fijas)
+augmentation:
+  degrees: 5.0      # Rotación mínima
+  translate: 0.1    
+  scale: 0.5        
+  shear: 2.0        
+  perspective: 0.0  
+  flipud: 0.0       # No flip vertical
+  fliplr: 0.0       # No flip horizontal para rejas
+  mosaic: 0.8       
+  mixup: 0.0        
+  copy_paste: 0.0   
+  hsv_h: 0.01       # Variación de color mínima
+  hsv_s: 0.5        
+  hsv_v: 0.4        
+
+# Métricas objetivo
+target_metrics:
+  map50: 0.85       # mAP@0.5 objetivo
+  map50_95: 0.70    # mAP@0.5:0.95 objetivo
+  precision: 0.85   
+  recall: 0.80      
+
+# Configuración de inferencia
+inference_config:
+  conf_thres: 0.6   # Umbral de confianza
+  iou_thres: 0.5    # Umbral de IoU para NMS
+  max_det: 300      # Máximo de detecciones por imagen
+  
+# Alertas y notificaciones
+alert_config:
+  unauthorized_person_threshold: 0.8
+  gate_open_duration_seconds: 300
+  multiple_vehicles_threshold: 3

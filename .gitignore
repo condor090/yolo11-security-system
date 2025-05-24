@@ -1,0 +1,115 @@
+# Ignore Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+env/
+venv/
+ENV/
+.venv
+pip-log.txt
+pip-delete-this-directory.txt
+.pytest_cache/
+*.log
+
+# Ignore Jupyter Notebooks
+.ipynb_checkpoints
+*.ipynb
+
+# Ignore OS files
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
+
+# Ignore IDE files
+.idea/
+.vscode/
+*.swp
+*.swo
+*~
+
+# Ignore model weights (too large for GitHub)
+*.pt
+*.pth
+*.onnx
+*.engine
+*.mlmodel
+*.tflite
+*.pb
+
+# But keep the base models
+!models/yolo11s.pt
+!models/yolo11m.pt
+
+# Ignore datasets (usually too large)
+data/train/images/*
+data/val/images/*
+data/test/images/*
+data/train/labels/*
+data/val/labels/*
+data/test/labels/*
+
+# But keep structure
+!data/train/images/.gitkeep
+!data/val/images/.gitkeep
+!data/test/images/.gitkeep
+!data/train/labels/.gitkeep
+!data/val/labels/.gitkeep
+!data/test/labels/.gitkeep
+
+# Ignore results and outputs
+runs/
+exports/
+*.mp4
+*.avi
+*.mov
+*.jpg
+*.jpeg
+*.png
+*.bmp
+
+# But keep docs images
+!docs/images/*.png
+!docs/images/*.jpg
+!docs/images/*.gif
+
+# Ignore logs
+logs/
+*.log
+
+# Docker
+.dockerignore
+
+# Environment variables
+.env
+.env.local
+.env.*.local
+
+# Temporary files
+*.tmp
+*.temp
+*.bak
+
+# macOS
+.AppleDouble
+.LSOverride
+
+# Windows
+desktop.ini
+
+# Linux
+*~
+
+# Archives
+*.zip
+*.tar.gz
+*.tar
+*.gz
+
+# Ultralytics source (too large for initial commit)
+ultralytics-main/

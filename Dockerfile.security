@@ -1,0 +1,164 @@
+# YOLO11 Security System - Detección de Rejas, Personas y Vehículos
+# Dockerfile optimizado para proyecto de seguridad con computer vision
+
+FROM pytorch/pytorch:2.7.0-cuda12.6-cudnn9-runtime
+
+# Información del proyecto
+LABEL maintainer="Security Vision Project"
+LABEL description="YOLO11 based security system for gate detection, authorized persons and vehicles"
+LABEL version="1.0"
+
+# Variables de entorno optimizadas
+ENV PYTHONUNBUFFERED=1 \
+    PYTHONDONTWRITEBYTECODE=1 \
+    PIP_NO_CACHE_DIR=1 \
+    PIP_BREAK_SYSTEM_PACKAGES=1 \
+    MKL_THREADING_LAYER=GNU \
+    OMP_NUM_THREADS=1 \
+    TF_CPP_MIN_LOG_LEVEL=3 \
+    DEBIAN_FRONTEND=noninteractive
+
+# Instalar dependencias del sistema
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    gcc g++ git zip unzip wget curl htop \
+    libgl1-mesa-glx libglib2.0-0 libpython3-dev \
+    libsm6 libxext6 libxrender-dev libgomp1 \
+    libgstreamer1.0-0 gstreamer1.0-plugins-base \
+    gstreamer1.0-plugins-good gstreamer1.0-plugins-bad \
+    gstreamer1.0-plugins-ugly gstreamer1.0-libav \
+    python3-opencv libopencv-dev \
+    gnupg software-properties-common \
+    ffmpeg libavcodec-extra \
+    && rm -rf /var/lib/apt/lists/*
+
+# Actualizaciones de seguridad
+RUN apt-get update && apt-get upgrade -y --no-install-recommends \
+    openssl tar curl wget \
+    && rm -rf /var/lib/apt/lists/*
+
+# Crear directorio de trabajo
+WORKDIR /security_project
+
+# Descargar fuentes necesarias para visualización
+ADD https://github.com/ultralytics/assets/releases/download/v0.0.0/Arial.ttf \
+    https://github.com/ultralytics/assets/releases/download/v0.0.0/Arial.Unicode.ttf \
+    /root/.config/Ultralytics/
+
+# Copiar código fuente de ultralytics
+COPY ultralytics-main/ ./ultralytics-main/
+
+# Instalar uv para manejo rápido de paquetes
+RUN pip install --upgrade pip && pip install uv
+
+# Instalar YOLO11 y dependencias
+WORKDIR /security_project/ultralytics-main
+RUN uv pip install --system -e ".[export]" \
+    albumentations \
+    pycocotools \
+    onnxruntime-gpu \
+    opencv-python \
+    opencv-contrib-python \
+    Pillow \
+    matplotlib \
+    seaborn \
+    pandas \
+    numpy \
+    scipy \
+    scikit-learn \
+    tqdm \
+    pyyaml \
+    requests \
+    psutil \
+    thop \
+    tensorboard \
+    clearml \
+    comet-ml \
+    wandb
+
+# Instalar dependencias adicionales para el proyecto de seguridad
+RUN uv pip install --system \
+    streamlit \
+    plotly \
+    fastapi \
+    uvicorn \
+    websockets \
+    python-multipart \
+    python-dotenv \
+    schedule \
+    pydantic \
+    loguru \
+    rich \
+    typer
+
+# Descargar modelo base YOLO11m
+ADD https://github.com/ultralytics/assets/releases/download/v8.3.0/yolo11m.pt /security_project/models/yolo11m.pt
+
+# Volver al directorio principal del proyecto
+WORKDIR /security_project
+
+# Crear estructura de directorios para el proyecto
+RUN mkdir -p {datasets,models,runs,scripts,configs,logs,data/{train,val,test}/{images,labels},weights,exports,notebooks}
+
+# Copiar archivos de configuración del proyecto
+COPY --chown=root:root project_files/ ./
+
+# Configurar permisos
+RUN chmod +x scripts/*.py scripts/*.sh 2>/dev/null || true
+
+# Limpiar archivos temporales
+RUN apt-get autoremove -y && apt-get clean && \
+    rm -rf /var/lib/apt/lists/* /tmp/* /var/tmp/* /root/.cache
+
+# Exponer puertos para aplicaciones
+EXPOSE 8000 8501 6006
+
+# Variables de entorno del proyecto
+ENV PROJECT_ROOT=/security_project
+ENV PYTHONPATH="${PYTHONPATH}:${PROJECT_ROOT}:${PROJECT_ROOT}/ultralytics-main"
+ENV CUDA_VISIBLE_DEVICES=0
+
+# Comando por defecto
+CMD ["python", "scripts/security_system.py"]
+
+# ===== INSTRUCCIONES DE USO =====
+#
+# Construir la imagen:
+# docker build -f Dockerfile.security -t yolo11-security:latest .
+#
+# Ejecutar con GPU:
+# docker run --gpus all -it --rm \
+#   -v $(pwd)/data:/security_project/data \
+#   -v $(pwd)/models:/security_project/models \
+#   -v $(pwd)/runs:/security_project/runs \
+#   -p 8000:8000 -p 8501:8501 -p 6006:6006 \
+#   yolo11-security:latest
+#
+# Ejecutar sin GPU (CPU only):
+# docker run -it --rm \
+#   -v $(pwd)/data:/security_project/data \
+#   -v $(pwd)/models:/security_project/models \
+#   -v $(pwd)/runs:/security_project/runs \
+#   -p 8000:8000 -p 8501:8501 -p 6006:6006 \
+#   yolo11-security:latest
+#
+# Ejecutar modo interactivo:
+# docker run --gpus all -it --rm \
+#   -v $(pwd):/security_project/workspace \
+#   yolo11-security:latest bash
+#
+# ===== COMANDOS DE DESARROLLO =====
+#
+# Entrenar modelo:
+# docker exec -it <container_id> python scripts/train_security_model.py
+#
+# Ejecutar inferencia:
+# docker exec -it <container_id> python scripts/run_inference.py
+#
+# Iniciar webapp:
+# docker exec -it <container_id> streamlit run apps/security_dashboard.py
+#
+# ===== NOTAS =====
+# - Asegúrate de tener docker y nvidia-docker instalados
+# - Los modelos se guardan en /security_project/models/
+# - Los datasets van en /security_project/data/
+# - Los resultados se guardan en /security_project/runs/

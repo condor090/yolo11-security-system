@@ -1,0 +1,59 @@
+# Configuración Optimizada para M3 Pro - 60 Imágenes de Rejas
+# Para usar con tu MacBook Pro M3 Pro
+
+# Rutas del dataset (ajustadas para dataset pequeño)
+train: /security_project/data/train/images
+val: /security_project/data/val/images
+
+# Clases simplificadas para empezar
+nc: 2
+names:
+  0: gate_open
+  1: gate_closed
+
+# Configuración optimizada para M3 Pro
+train_config:
+  epochs: 150                    # Reducido para dataset pequeño
+  batch_size: 12                 # Óptimo para 18GB RAM
+  image_size: 640                # Tamaño estándar
+  learning_rate: 0.01
+  momentum: 0.937
+  weight_decay: 0.0005
+  warmup_epochs: 3
+  patience: 30                   # Early stopping más agresivo
+
+# Data augmentation específico para rejas
+augmentation:
+  hsv_h: 0.01                   # Mínimo cambio de color
+  hsv_s: 0.5                    # Moderado cambio de saturación
+  hsv_v: 0.3                    # Cambio de brillo
+  degrees: 5.0                  # Rotación mínima (rejas son fijas)
+  translate: 0.05               # Traslación mínima
+  scale: 0.3                    # Escala moderada
+  fliplr: 0.0                   # NO flip horizontal (orientación importa)
+  flipud: 0.0                   # NO flip vertical
+  mosaic: 0.8                   # Reducido para dataset pequeño
+  mixup: 0.0                    # Desactivado para mejor precisión
+  copy_paste: 0.0               # Desactivado
+
+# Configuración específica para M3 Pro
+hardware_config:
+  device: "mps"                 # Metal Performance Shaders (GPU M3)
+  workers: 6                    # Usar 6 de los 11 cores
+  amp: true                     # Mixed precision para eficiencia
+  cache: true                   # Cache en RAM (tienes 18GB)
+
+# Métricas objetivo realistas para 60 imágenes
+target_metrics:
+  gate_open:
+    precision: 0.85             # Objetivo realista
+    recall: 0.80
+  gate_closed:
+    precision: 0.85
+    recall: 0.80
+
+# Validación más frecuente para dataset pequeño
+validation:
+  save_period: 10               # Guardar cada 10 épocas
+  conf_threshold: 0.3           # Más sensible
+  iou_threshold: 0.6
