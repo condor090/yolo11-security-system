@@ -67,15 +67,71 @@ def load_security_detector():
         st.error(f"Error cargando detector: {e}")
         return None
 
+def calculate_iou(box1, box2):
+    """Calcular Intersection over Union entre dos cajas"""
+    x1 = max(box1['x1'], box2['x1'])
+    y1 = max(box1['y1'], box2['y1'])
+    x2 = min(box1['x2'], box2['x2'])
+    y2 = min(box1['y2'], box2['y2'])
+    
+    intersection = max(0, x2 - x1) * max(0, y2 - y1)
+    area1 = (box1['x2'] - box1['x1']) * (box1['y2'] - box1['y1'])
+    area2 = (box2['x2'] - box2['x1']) * (box2['y2'] - box2['y1'])
+    union = area1 + area2 - intersection
+    
+    return intersection / union if union > 0 else 0
+
+def count_unique_doors(detections, iou_threshold=0.5):
+    """Contar puertas únicas considerando superposiciones"""
+    if not detections:
+        return {'gate_open': 0, 'gate_closed': 0}
+    
+    # Separar por clase
+    open_doors = [d for d in detections if d['class_name'] == 'gate_open']
+    closed_doors = [d for d in detections if d['class_name'] == 'gate_closed']
+    
+    # Para puertas abiertas, verificar superposiciones
+    unique_open = []
+    for door in open_doors:
+        is_duplicate = False
+        for unique in unique_open:
+            if calculate_iou(door['bbox'], unique['bbox']) > iou_threshold:
+                is_duplicate = True
+                break
+        if not is_duplicate:
+            unique_open.append(door)
+    
+    # Para puertas cerradas, hacer lo mismo
+    unique_closed = []
+    for door in closed_doors:
+        is_duplicate = False
+        for unique in unique_closed:
+            if calculate_iou(door['bbox'], unique['bbox']) > iou_threshold:
+                is_duplicate = True
+                break
+        if not is_duplicate:
+            unique_closed.append(door)
+    
+    return {
+        'gate_open': len(unique_open),
+        'gate_closed': len(unique_closed),
+        'total_detections': len(detections),
+        'unique_detections': unique_open + unique_closed
+    }
+
 def display_metrics(detections: list):
     """Mostrar métricas principales para detección de puertas"""
     col1, col2, col3, col4 = st.columns(4)
     
-    # Contar puertas abiertas y cerradas
-    gate_open_count = sum(1 for d in detections if d['class_name'] == 'gate_open')
-    gate_closed_count = sum(1 for d in detections if d['class_name'] == 'gate_closed')
-    total_detections = len(detections)
-    avg_confidence = np.mean([d['confidence'] for d in detections]) if detections else 0
+    # Contar puertas únicas
+    door_counts = count_unique_doors(detections)
+    gate_open_count = door_counts['gate_open']
+    gate_closed_count = door_counts['gate_closed']
+    total_detections = door_counts['total_detections']
+    
+    # Calcular confianza promedio solo de detecciones únicas
+    unique_detections = door_counts['unique_detections']
+    avg_confidence = np.mean([d['confidence'] for d in unique_detections]) if unique_detections else 0
     
     with col1:
         st.metric(
@@ -94,8 +150,9 @@ def display_metrics(detections: list):
     with col3:
         st.metric(
             label="📊 Total Detecciones",
-            value=total_detections,
-            delta=None
+            value=f"{len(unique_detections)}/{total_detections}",
+            delta=None,
+            help="Únicas/Totales"
         )
     
     with col4:
@@ -107,7 +164,8 @@ def display_metrics(detections: list):
 
 def display_alerts(detections: list):
     """Mostrar alertas del sistema basadas en detecciones de puertas"""
-    gate_open_count = sum(1 for d in detections if d['class_name'] == 'gate_open')
+    door_counts = count_unique_doors(detections)
+    gate_open_count = door_counts['gate_open']
     
     if gate_open_count > 0:
         st.subheader("🚨 Alertas del Sistema")
@@ -129,7 +187,7 @@ def display_alerts(detections: list):
         """, unsafe_allow_html=True)
 
 def display_detections_table(detections: list):
-    """Mostrar tabla de detecciones"""
+    """Mostrar tabla de detecciones con indicador de confianza"""
     if not detections:
         st.info("No hay detecciones en el frame actual")
         return
@@ -137,9 +195,25 @@ def display_detections_table(detections: list):
     # Preparar datos para la tabla
     table_data = []
     for det in detections:
+        # Determinar nivel de confianza
+        conf = det['confidence']
+        if conf >= 0.75:
+            conf_emoji = "🟢"
+            conf_level = "Alta"
+        elif conf >= 0.65:
+            conf_emoji = "🟡"
+            conf_level = "Media"
+        elif conf >= 0.50:
+            conf_emoji = "🔴"
+            conf_level = "Baja"
+        else:
+            conf_emoji = "⚫"
+            conf_level = "Muy Baja"
+            
         table_data.append({
             'Clase': det['class_name'].replace('_', ' ').title(),
-            'Confianza': f"{det['confidence']:.2f}",
+            'Confianza': f"{conf:.2f}",
+            'Nivel': f"{conf_emoji} {conf_level}",
             'Centro X': det['center']['x'],
             'Centro Y': det['center']['y'],
             'Área': (det['bbox']['x2'] - det['bbox']['x1']) * (det['bbox']['y2'] - det['bbox']['y1'])
@@ -147,6 +221,14 @@ def display_detections_table(detections: list):
     
     df = pd.DataFrame(table_data)
     st.dataframe(df, use_container_width=True)
+    
+    # Advertencia para detecciones de baja confianza
+    low_conf_count = sum(1 for det in detections if det['confidence'] < 0.65)
+    if low_conf_count > 0:
+        st.warning(f"""
+        ⚠️ **Advertencia**: {low_conf_count} detección(es) con baja confianza (<65%).
+        Estas podrían ser falsos positivos. Se recomienda verificación visual.
+        """)
 
 
 
@@ -155,8 +237,8 @@ def process_uploaded_image(model, uploaded_file, confidence_threshold=0.5):
     # Leer imagen
     image = Image.open(uploaded_file)
     
-    # Procesar con YOLO
-    results = model.predict(image, conf=confidence_threshold, verbose=False)
+    # Procesar con YOLO - Agregar IOU threshold para reducir duplicados
+    results = model.predict(image, conf=confidence_threshold, iou=0.5, verbose=False)
     
     # Extraer detecciones
     detections = []
@@ -210,6 +292,16 @@ def main():
     st.sidebar.success("✅ Modelo cargado correctamente")
     st.sidebar.info(f"Clases: {', '.join(model.names.values())}")
     
+    # Agregar información sobre umbrales
+    st.sidebar.markdown("---")
+    st.sidebar.markdown("### 📊 Niveles de Confianza")
+    st.sidebar.markdown("""
+    - **🟢 > 75%**: Alta confianza
+    - **🟡 65-75%**: Confianza media
+    - **🔴 50-65%**: Baja confianza
+    - **⚫ < 50%**: No detectado
+    """)
+    
     if mode == "📸 Análisis de Imagen":
         st.header("Análisis de Imagen")
         
@@ -218,9 +310,26 @@ def main():
             "Umbral de Confianza",
             min_value=0.1,
             max_value=1.0,
-            value=0.5,
-            step=0.05
+            value=0.65,  # Aumentado de 0.5 a 0.65
+            step=0.05,
+            help="Valores más altos reducen falsos positivos pero pueden perder detecciones reales"
         )
+        
+        # Modo de análisis
+        analysis_mode = st.sidebar.radio(
+            "Modo de Análisis",
+            ["🎯 Balanceado", "🛡️ Alta Seguridad", "🔍 Alta Sensibilidad"],
+            index=0,
+            help="Balanceado: 65% | Alta Seguridad: 75% | Alta Sensibilidad: 50%"
+        )
+        
+        # Ajustar umbral según modo
+        if analysis_mode == "🛡️ Alta Seguridad":
+            confidence_threshold = 0.75
+        elif analysis_mode == "🔍 Alta Sensibilidad":
+            confidence_threshold = 0.50
+        
+        st.sidebar.info(f"Umbral actual: {confidence_threshold:.0%}")
         
         # Subir imagen
         uploaded_file = st.file_uploader(
@@ -251,6 +360,20 @@ def main():
             # Métricas
             st.subheader("📊 Métricas de Detección")
             display_metrics(detections)
+            
+            # Nota interpretativa
+            if len(detections) > 1:
+                # Verificar si hay detecciones superpuestas
+                gate_open_count = sum(1 for d in detections if d['class_name'] == 'gate_open')
+                if gate_open_count > 1:
+                    st.info("""
+                    💡 **Nota**: Se detectaron múltiples instancias de puertas abiertas. 
+                    Esto puede indicar:
+                    - Una puerta grande detectada desde diferentes ángulos
+                    - Múltiples puertas abiertas reales
+                    
+                    Verifique visualmente la imagen para confirmar el número real de puertas.
+                    """)
             
             # Alertas
             st.subheader("🚨 Estado de Seguridad")
