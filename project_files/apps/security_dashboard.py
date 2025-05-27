@@ -84,7 +84,12 @@ def calculate_iou(box1, box2):
 def count_unique_doors(detections, iou_threshold=0.5):
     """Contar puertas únicas considerando superposiciones"""
     if not detections:
-        return {'gate_open': 0, 'gate_closed': 0}
+        return {
+            'gate_open': 0,
+            'gate_closed': 0,
+            'total_detections': 0,
+            'unique_detections': []
+        }
     
     # Separar por clase
     open_doors = [d for d in detections if d['class_name'] == 'gate_open']
