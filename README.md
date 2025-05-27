@@ -1,33 +1,52 @@
-# YOLO11 Security System
+# YOLO11 Security System 🛡️
 
 Un sistema de seguridad inteligente basado en YOLO11 para la detección de rejas abiertas/cerradas, personas autorizadas y vehículos.
 
+## 🎊 ÚLTIMA ACTUALIZACIÓN: MODELO DE PUERTAS ENTRENADO CON ÉXITO
+- **Fecha:** 26 Mayo 2025
+- **Precisión alcanzada:** 99.39% mAP@50
+- **Tiempo de entrenamiento:** 44 minutos en MacBook Pro M3
+- **Estado:** Listo para producción
+
 ## 🚀 Características Principales
 
-- **Detección de Rejas**: Identifica automáticamente si una reja está abierta o cerrada
+- **Detección de Rejas**: Identifica automáticamente si una reja está abierta o cerrada ✅
 - **Reconocimiento de Personas**: Distingue entre personas autorizadas y no autorizadas
 - **Detección de Vehículos**: Identifica camiones, automóviles y motocicletas
 - **Dashboard Web**: Interfaz de monitoreo en tiempo real con Streamlit
 - **Alertas Inteligentes**: Sistema de notificaciones por eventos de seguridad
-- **Contenedorizado**: Fácil despliegue con Docker y GPU/CPU
+- **Modelo Optimizado**: 15MB, 25-40 FPS en M3 Pro
+
+## 📊 Rendimiento del Modelo de Puertas
+
+| Métrica | Valor Alcanzado | Objetivo Original |
+|---------|-----------------|-------------------|
+| mAP@50 | **99.39%** | 95% |
+| mAP@50-95 | **86.10%** | 80% |
+| Precisión | **97.3%** | 90% |
+| Recall | **98.3%** | 90% |
+| Velocidad | **30ms/imagen** | <100ms |
+| Tamaño modelo | **15MB** | <50MB |
 
 ## 🏗️ Arquitectura del Sistema
 
 ```
 YOLO11 Security System/
-├── ultralytics-main/          # Código fuente YOLO11
-├── project_files/
-│   ├── scripts/              # Scripts principales
-│   ├── configs/              # Configuraciones
-│   └── apps/                 # Aplicaciones web
 ├── data/                     # Datasets
-│   ├── train/               # Datos de entrenamiento
-│   ├── val/                 # Datos de validación
+│   ├── train/               # 1,172 imágenes entrenamiento
+│   ├── val/                 # 292 imágenes validación
 │   └── test/                # Datos de prueba
-├── models/                   # Modelos entrenados
-├── runs/                     # Resultados de entrenamiento
-├── logs/                     # Archivos de log
-└── Dockerfile.security       # Configuración Docker
+├── models/                   # Modelos base YOLO11
+├── runs/
+│   └── gates/
+│       └── gate_detector_v1/
+│           └── weights/
+│               └── best.pt   # 🌟 MODELO ENTRENADO
+├── project_files/
+│   ├── scripts/             # Scripts principales
+│   ├── configs/             # Configuraciones
+│   └── apps/                # Dashboard Streamlit
+└── Dockerfile.security      # Configuración Docker
 ```
 
 ## 🛠️ Instalación y Configuración
@@ -35,16 +54,15 @@ YOLO11 Security System/
 ### Prerequisitos
 
 - Docker (versión 20.10+)
-- NVIDIA Docker (opcional, para GPU)
 - Git
 - 8GB RAM mínimo
-- GPU NVIDIA (recomendado)
+- GPU NVIDIA o Apple Silicon (M1/M2/M3)
 
 ### Instalación Rápida
 
 1. **Clonar el repositorio**:
 ```bash
-git clone <repository-url>
+git clone https://github.com/condor090/yolo11-security-system
 cd yolo11_project
 ```
 
@@ -66,159 +84,45 @@ chmod +x deploy.sh
 ./deploy.sh run-dashboard
 # Acceder a: http://localhost:8501
 
-# O modo interactivo para desarrollo
-./deploy.sh run-interactive
+# O probar el modelo directamente
+python3 test_model.py
 ```
 
-## 📊 Clases de Detección
+## 🎯 Uso del Modelo Entrenado
 
-El sistema está configurado para detectar 7 clases principales:
-
-| ID | Clase | Descripción |
-|----|-------|-------------|
-| 0 | `gate_open` | Reja o portón en posición abierta |
-| 1 | `gate_closed` | Reja o portón en posición cerrada |
-| 2 | `authorized_person` | Persona autorizada identificada |
-| 3 | `unauthorized_person` | Persona no autorizada o desconocida |
-| 4 | `truck` | Vehículo tipo camión |
-| 5 | `car` | Vehículo tipo automóvil |
-| 6 | `motorcycle` | Vehículo tipo motocicleta |
-
-## 🚀 Guía de Uso
-
-### 1. Dashboard Web (Recomendado)
-
-```bash
-./deploy.sh run-dashboard
-```
-
-Accede a `http://localhost:8501` para:
-- Monitoreo en tiempo real
-- Análisis de imágenes
-- Visualización de estadísticas
-- Configuración de alertas
-
-### 2. Entrenamiento de Modelo
-
-```bash
-# Preparar datos en: data/train/ y data/val/
-# Ejecutar entrenamiento
-./deploy.sh run-training
-
-# Monitorear progreso
-./deploy.sh logs yolo11-security-train
-```
-
-### 3. Inferencia desde Línea de Comandos
-
-```bash
-# Modo interactivo
-./deploy.sh run-interactive
-
-# Dentro del contenedor:
-python scripts/security_system.py --source 0 --confidence 0.6
-python scripts/security_system.py --source /path/to/video.mp4 --save-video
-```
-
-### 4. API de Detección
-
-```bash
-# Iniciar servicio de inferencia
-./deploy.sh run-inference
-
-# El sistema estará disponible para procesar streams de video
-```
-
-## 📁 Preparación de Datos
-
-### Estructura del Dataset
-
-```
-data/
-├── train/
-│   ├── images/              # Imágenes de entrenamiento
-│   └── labels/              # Anotaciones YOLO (.txt)
-├── val/
-│   ├── images/              # Imágenes de validación
-│   └── labels/              # Anotaciones YOLO (.txt)
-└── test/
-    ├── images/              # Imágenes de prueba
-    └── labels/              # Anotaciones YOLO (.txt)
-```
-
-### Formato de Anotaciones
-
-Cada archivo `.txt` contiene las anotaciones en formato YOLO:
-```
-class_id center_x center_y width height
-```
-
-Ejemplo:
-```
-0 0.5 0.3 0.4 0.2    # gate_open
-2 0.7 0.8 0.1 0.3    # authorized_person
-```
-
-### Herramientas de Anotación Recomendadas
-
-- [LabelImg](https://github.com/tzutalin/labelImg)
-- [CVAT](https://cvat.org/)
-- [Roboflow](https://roboflow.com/)
-
-## ⚙️ Configuración Avanzada
-
-### Parámetros de Entrenamiento
-
-Editar `project_files/configs/security_dataset.yaml`:
-
-```yaml
-train_config:
-  epochs: 300
-  batch_size: 16
-  learning_rate: 0.01
-  image_size: 640
-
-augmentation:
-  degrees: 10.0
-  translate: 0.1
-  scale: 0.5
-  fliplr: 0.0  # No flip horizontal para mantener orientación
-```
-
-### Configuración de Alertas
-
+### Prueba Rápida
 ```python
-# En scripts/security_system.py
-ALERT_THRESHOLDS = {
-    'unauthorized_person': 0.8,
-    'gate_open_duration': 300,  # segundos
-    'multiple_vehicles': 3
-}
+from ultralytics import YOLO
+
+# Cargar modelo entrenado
+model = YOLO('runs/gates/gate_detector_v1/weights/best.pt')
+
+# Detectar en imagen
+results = model.predict('path/to/image.jpg', conf=0.5)
+
+# Procesar resultados
+for r in results:
+    boxes = r.boxes
+    for box in boxes:
+        cls = model.names[int(box.cls)]
+        conf = float(box.conf)
+        print(f"Detectado: {cls} ({conf:.2%})")
 ```
 
-## 📈 Métricas y Evaluación
+### Dashboard Web
 
-### Métricas Objetivo por Clase
+El dashboard incluye:
+- Análisis en tiempo real
+- Histórico de detecciones
+- Sistema de alertas configurables
+- Estadísticas de uso
 
-| Clase | Precisión | Recall |
-|-------|-----------|--------|
-| gate_open | 95% | 90% |
-| gate_closed | 95% | 90% |
-| authorized_person | 85% | 80% |
-| unauthorized_person | 90% | 85% |
-| truck | 90% | 85% |
-| car | 85% | 80% |
-| motorcycle | 80% | 75% |
+## 📊 Dataset Utilizado
 
-### Comandos de Evaluación
-
-```bash
-# Validar modelo
-docker exec yolo11-security python scripts/train_security_model.py --validate
-
-# Exportar modelo
-docker exec yolo11-security python scripts/train_security_model.py --export
-```
+- **Origen**: 32,000+ imágenes de Telegram
+- **Procesadas**: 1,464 imágenes
+- **Clases**: gate_open, gate_closed
+- **División**: 80% train, 20% val
 
 ## 🔧 Comandos Útiles
 
@@ -226,81 +130,89 @@ docker exec yolo11-security python scripts/train_security_model.py --export
 # Ver estado del sistema
 ./deploy.sh status
 
+# Probar modelo
+python3 test_model.py
+
 # Ver logs en tiempo real
 ./deploy.sh logs yolo11-security-dashboard
 
+# Entrenar con nuevos datos
+python3 train_gates.py
+
 # Detener todos los contenedores
 ./deploy.sh stop
-
-# Limpiar sistema completamente
-./deploy.sh clean
-
-# Acceso interactivo al contenedor
-./deploy.sh run-interactive
 ```
+
+## 📈 Resultados de Entrenamiento
+
+<details>
+<summary>Ver gráfica de evolución del entrenamiento</summary>
+
+```
+mAP50 Evolution:
+100% |████████████████████| 99.39%
+ 90% |███████████████     |
+ 80% |████████████        |
+ 70% |██████████          |
+ 60% |████████            |
+ 50% |██████              |
+ 40% |████                |
+ 30% |███                 |
+ 20% |██                  |
+ 10% |█                   |
+  0% |____________________|
+     1   5   10   15   19  Épocas
+```
+</details>
 
 ## 🐛 Troubleshooting
 
-### Problemas Comunes
-
-1. **Error de GPU**:
+### Apple Silicon (M1/M2/M3)
 ```bash
-# Verificar NVIDIA Docker
-docker run --rm --gpus all nvidia/cuda:11.0-base nvidia-smi
+# Si hay problemas con MPS
+export PYTORCH_ENABLE_MPS_FALLBACK=1
+
+# Usar Rosetta 2 si es necesario
+arch -x86_64 python3 train_gates.py
 ```
 
-2. **Memoria insuficiente**:
+### Docker en Mac
 ```bash
-# Reducir batch size en configuración
-# O usar modelo más pequeño: yolo11s.pt
+# Aumentar memoria asignada a Docker Desktop
+# Preferences > Resources > Memory: 8GB mínimo
 ```
 
-3. **Puertos ocupados**:
-```bash
-# Cambiar puertos en deploy.sh
--p 8502:8501  # En lugar de 8501:8501
-```
+## 🚀 Roadmap
 
-4. **Datos no encontrados**:
-```bash
-# Verificar estructura de directorios
-ls -la data/train/images/
-ls -la data/train/labels/
-```
-
-## 📊 Casos de Uso
-
-### 1. Control de Acceso Vehicular
-- Detección automática de apertura/cierre de rejas
-- Identificación de vehículos autorizados
-- Registro de eventos de entrada/salida
-
-### 2. Seguridad Perimetral
-- Detección de personas no autorizadas
-- Alertas en tiempo real
-- Grabación de eventos de seguridad
-
-### 3. Monitoreo de Tráfico
-- Conteo de vehículos por tipo
-- Análisis de patrones de tráfico
-- Estadísticas de uso
-
-## 🔮 Funcionalidades Futuras
-
-- [ ] Reconocimiento facial para personas autorizadas
-- [ ] Detección de matrículas vehiculares
-- [ ] Integración con sistemas de alarmas
+- [x] Modelo de detección de puertas
+- [x] Dashboard web básico
+- [ ] Sistema de alertas por Telegram
 - [ ] API REST para integraciones
-- [ ] Análisis de comportamiento anómalo
-- [ ] Reportes automáticos por email
-- [ ] App móvil para monitoreo
+- [ ] Detección de personas autorizadas
+- [ ] Detección de vehículos
+- [ ] App móvil
+- [ ] Edge deployment (Raspberry Pi)
 
-## 📞 Soporte
+## 📊 Casos de Uso Implementados
 
-Para reportar bugs o solicitar funcionalidades:
-- Crear un issue en el repositorio
-- Incluir logs relevantes
-- Especificar configuración del sistema
+### 1. Control de Acceso Residencial ✅
+- Detección de puerta abierta/cerrada en tiempo real
+- Alertas configurables por tiempo
+- Registro histórico de eventos
+
+### 2. Próximamente
+- Identificación de personas autorizadas
+- Control vehicular
+- Análisis de patrones
+
+## 🤝 Contribuir
+
+Las contribuciones son bienvenidas! Por favor:
+1. Fork el proyecto
+2. Crea una feature branch (`git checkout -b feature/AmazingFeature`)
+3. Commit tus cambios (`git commit -m 'Add AmazingFeature'`)
+4. Push a la branch (`git push origin feature/AmazingFeature`)
+5. Abre un Pull Request
 
 ## 📄 Licencia
 
@@ -309,9 +221,18 @@ Este proyecto está bajo la licencia AGPL-3.0 - ver archivo [LICENSE](LICENSE) p
 ## 🙏 Agradecimientos
 
 - [Ultralytics](https://ultralytics.com/) por YOLO11
-- Comunidad de Computer Vision
-- Contribuidores del proyecto
+- Apple por los chips M3 Pro que hacen magia
+- Virgilio (AI Assistant) por la guía durante el desarrollo
+- La comunidad de Computer Vision
+
+## 📞 Contacto
+
+**Desarrollador**: condor090  
+**GitHub**: https://github.com/condor090  
+**Proyecto**: https://github.com/condor090/yolo11-security-system
 
 ---
 
 **Sistema de Seguridad YOLO11** - Detección inteligente para un mundo más seguro 🛡️
+
+*"De 0 a 99.39% de precisión en 44 minutos. El futuro es ahora."*

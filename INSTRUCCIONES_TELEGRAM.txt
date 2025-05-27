@@ -1,0 +1,43 @@
+#!/usr/bin/env python3
+"""
+Script simplificado para encontrar y mostrar información del grupo
+"""
+
+print("""
+⚠️  INSTRUCCIONES IMPORTANTES:
+
+Para descargar las fotos del grupo AlertasFullYomjai:
+
+1. Abra Terminal (Cmd + Espacio, escriba "Terminal")
+
+2. Copie y pegue estos comandos uno por uno:
+
+   cd /Users/Shared/yolo11_project
+   
+3. Luego ejecute:
+
+   python3 -c "
+from telethon.sync import TelegramClient
+client = TelegramClient('session', 26005180, 'c86549df51d1b77f390fe79020fb0ff3')
+client.start('+526624152145')
+print('Conectado!')
+for dialog in client.iter_dialogs():
+    if dialog.is_group and 'alertas' in dialog.name.lower():
+        print(f'Grupo encontrado: {dialog.name} (ID: {dialog.id})')
+client.disconnect()
+"
+
+4. Cuando le pida el código, ingrese el nuevo código que reciba
+
+5. Una vez que vea el nombre exacto del grupo, podremos actualizar el script de descarga
+
+ALTERNATIVA RÁPIDA:
+===================
+Si tiene Telegram Desktop instalado:
+1. Abra Telegram Desktop
+2. Vaya al grupo AlertasFullYomjai
+3. Seleccione todas las fotos (Cmd+A)
+4. Click derecho → "Save As..."
+5. Elija la carpeta: /Users/Shared/yolo11_project/data/telegram_photos
+
+""")
