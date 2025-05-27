@@ -1,11 +1,13 @@
 # 📊 ESTADO DEL PROYECTO YOLO11 SECURITY SYSTEM
-**Última actualización**: 26 de Mayo 2025, 04:05 hrs  
+**Última actualización**: 27 de Mayo 2025, 13:05 hrs  
 **Desarrollador**: condor090  
 **Asistente**: Virgilio (AI)
 
 ## 🎯 RESUMEN EJECUTIVO
 
-Sistema de seguridad basado en YOLO11 para detección de rejas (abiertas/cerradas), personas autorizadas/no autorizadas y vehículos. **MODELO DE PUERTAS ENTRENADO CON ÉXITO - 99.39% mAP50**
+Sistema de seguridad basado en YOLO11 para detección de rejas (abiertas/cerradas). 
+- **MODELO ENTRENADO**: 99.39% mAP50 ✅
+- **SISTEMA DE ALERTAS V2**: Temporizadores inteligentes implementados ✅
 
 **Repositorio**: https://github.com/condor090/yolo11-security-system
 
@@ -60,14 +62,44 @@ Sistema de seguridad basado en YOLO11 para detección de rejas (abiertas/cerrada
 
 ## 🔄 EN PROCESO
 
-### Integración del Modelo Entrenado
-```bash
-# El modelo está listo, falta:
-1. Actualizar dashboard para usar el nuevo modelo
-2. Modificar security_system.py para cargar best.pt
-3. Configurar sistema de alertas
-4. Subir modelo a GitHub (Git LFS)
-```
+### Sistema de Alertas - Fase 2 (50% completado)
+
+#### ✅ Completado (27 Mayo):
+1. **AlertManager V2 con Temporizadores**
+   - Delays configurables por zona (5s - 5min)
+   - Sistema de estados: countdown → triggered → cancelled
+   - Monitor asíncrono con threads
+
+2. **Sistema de Alarma Sonora**
+   - Integración con pygame
+   - Alarma persistente hasta atención
+   - Control de volumen y activación
+
+3. **Dashboard V2**
+   - Monitor en tiempo real de temporizadores
+   - Barras de progreso animadas
+   - Controles para gestionar alarmas
+   - Configuración de delays desde UI
+
+4. **Configuración Flexible**
+   - JSON para persistencia
+   - Perfiles de tiempo (normal, rush hour, nocturno)
+   - Diferentes delays por cámara/zona
+
+#### ⏳ Pendiente:
+1. **Integración Telegram Bot**
+   - Envío de fotos cuando se active alarma
+   - Comandos remotos de control
+   - Notificaciones en tiempo real
+
+2. **Base de Datos de Eventos**
+   - SQLite para historial
+   - Modelo de datos para eventos
+   - Analytics y reportes
+
+3. **Pruebas con Cámara Real**
+   - Integración con webcam
+   - Stream de video en vivo
 
 ## 📁 ESTRUCTURA DE ARCHIVOS ACTUALIZADA
 
@@ -108,53 +140,58 @@ Sistema de seguridad basado en YOLO11 para detección de rejas (abiertas/cerrada
 
 ## 🚀 PRÓXIMOS PASOS INMEDIATOS
 
-### 1. **Integrar Modelo en Dashboard** (PRIORIDAD ALTA)
+### 1. **Completar Integración Telegram** (PRIORIDAD ALTA)
 ```python
-# Modificar security_dashboard.py
-model = YOLO('runs/gates/gate_detector_v1/weights/best.pt')
+# Usar sesiones existentes: alertas_session.session
+# Implementar TelegramNotifier en alert_manager_v2.py
+# Enviar foto + mensaje cuando se active alarma
 ```
 
-### 2. **Actualizar Scripts de Inferencia**
+### 2. **Base de Datos de Eventos**
 ```bash
-# Actualizar security_system.py para usar el modelo entrenado
-# Agregar lógica de alertas específicas para puertas
+# SQLAlchemy + SQLite
+# Tablas: events, alerts, door_states, statistics
+# Dashboard para visualizar historial
 ```
 
-### 3. **Subir Modelo a GitHub**
+### 3. **Video en Tiempo Real**
 ```bash
-# Usar Git LFS para el modelo
-git lfs track "*.pt"
-git add runs/gates/gate_detector_v1/weights/best.pt
-git commit -m "feat: modelo de puertas entrenado - 99.39% mAP50"
-git push
+# Conectar con cámara USB o IP
+# Procesar stream con temporizadores
+# Mostrar en dashboard V2
 ```
 
-### 4. **Documentar en README**
-- Agregar resultados del entrenamiento
-- Incluir ejemplos de detección
-- Actualizar métricas de rendimiento
+### 4. **Deploy con Docker**
+```bash
+# Actualizar Dockerfile con nuevas dependencias (pygame)
+# docker build -t yolo11-security:v2 .
+# docker-compose con todos los servicios
+```
 
 ## 🛠️ COMANDOS ÚTILES
 
 ```bash
-# Dashboard con modelo nuevo
+# Dashboard V2 con temporizadores
 cd /Users/Shared/yolo11_project
-# Primero actualizar el código para usar best.pt
+python3 run_dashboard_v2.py
+# O directamente:
+streamlit run project_files/apps/security_dashboard_v2.py --server.port 8502
+
+# Probar sistema de temporizadores
+cd alerts
+python3 test_timer_system.py
+
+# Dashboard V1 (sin temporizadores)
 ./deploy.sh run-dashboard
 
-# Probar modelo
+# Ver logs de Git
+git log --oneline -10
+
+# Estado del proyecto
+git status
+
+# Ejecutar pruebas del modelo
 python3 test_model.py
-
-# Ver métricas de entrenamiento
-cat runs/gates/gate_detector_v1/results.csv
-
-# Git - Guardar progreso
-git add .
-git commit -m "feat: entrenamiento exitoso - 99.39% precisión"
-git push
-
-# Docker - Ver logs
-docker logs yolo11-security-dashboard
 ```
 
 ## ⚠️ PROBLEMAS RESUELTOS
@@ -185,21 +222,32 @@ docker logs yolo11-security-dashboard
 
 ## 🎊 LOGROS DESTACADOS
 
-1. **De 0 a producción en 44 minutos**
-2. **99.39% de precisión** (mejor que sistemas comerciales)
-3. **Modelo compacto** de solo 15MB
-4. **Listo para edge deployment**
+### 26 Mayo 2025:
+1. **Modelo entrenado**: 99.39% precisión en 44 minutos
+2. **Dataset procesado**: 1,464 imágenes etiquetadas
+3. **Pruebas exitosas**: 5/5 detecciones correctas
 
-## 📞 INFORMACIÓN DE CONTACTO
+### 27 Mayo 2025:
+1. **Sistema de Alertas V2**: Temporizadores inteligentes
+2. **Dashboard mejorado**: Monitor en tiempo real
+3. **Alarma sonora**: Sistema completo de notificación
+4. **Arquitectura robusta**: Threads, async, estados
 
-- **GitHub**: condor090
-- **Proyecto**: https://github.com/condor090/yolo11-security-system
-- **Asistente AI**: Virgilio
+## 📞 VERSIONES Y TAGS
+
+- **v1.0.0**: Release inicial
+- **v1.0.0-gates-trained**: Modelo entrenado
+- **v1.1.0-dashboard-basic**: Dashboard integrado
+- **v1.2.0-docker-ready**: Docker funcional
+- **v1.2.5-intelligent-detection**: Detección mejorada
+- **v2.0.0-alerts-base**: Sistema de alertas base
+- **v2.1.0-smart-timers**: Temporizadores inteligentes ⭐
 
 ---
 
-**Estado General**: 🟢 PROYECTO EN FASE DE INTEGRACIÓN
+**Estado General**: 🟢 PROYECTO EN FASE 2 - SISTEMA DE ALERTAS (50%)
 
-*El modelo está entrenado y probado. Solo falta integrarlo en el sistema completo.*
+*El modelo está entrenado, el sistema de alertas con temporizadores funciona. 
+Próximo objetivo: Integración con Telegram y base de datos.*
 
 *Documento actualizado automáticamente por el sistema*
