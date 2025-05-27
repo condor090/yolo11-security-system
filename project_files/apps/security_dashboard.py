@@ -16,6 +16,12 @@ import plotly.graph_objects as go
 from pathlib import Path
 from ultralytics import YOLO
 from PIL import Image
+import sys
+import asyncio
+
+# Añadir ruta para importar AlertManager
+sys.path.append(str(Path(__file__).parent.parent.parent))
+from alerts.alert_manager import AlertManager
 
 # Configuración de la página
 st.set_page_config(
@@ -237,7 +243,17 @@ def display_detections_table(detections: list):
 
 
 
-def process_uploaded_image(model, uploaded_file, confidence_threshold=0.5):
+@st.cache_resource
+def load_alert_manager():
+    """Cargar el gestor de alertas (cached)"""
+    try:
+        config_path = Path(__file__).parent.parent.parent / 'alerts' / 'alert_config.json'
+        return AlertManager(str(config_path))
+    except Exception as e:
+        st.error(f"Error cargando gestor de alertas: {e}")
+        return None
+
+def process_uploaded_image(model, uploaded_file, confidence_threshold=0.5, alert_manager=None):
     """Procesar imagen subida con el modelo de puertas"""
     # Leer imagen
     image = Image.open(uploaded_file)
@@ -268,7 +284,18 @@ def process_uploaded_image(model, uploaded_file, confidence_threshold=0.5):
     # Obtener imagen anotada
     annotated_frame = results[0].plot()
     
-    return annotated_frame, detections
+    # Crear alerta si hay detecciones y alert_manager está disponible
+    alert_created = None
+    if detections and alert_manager:
+        # Convertir imagen anotada para guardar
+        loop = asyncio.new_event_loop()
+        asyncio.set_event_loop(loop)
+        alert_created = loop.run_until_complete(
+            alert_manager.create_alert(detections, annotated_frame)
+        )
+        loop.close()
+    
+    return annotated_frame, detections, alert_created
 
 def main():
     """Función principal del dashboard"""
@@ -293,8 +320,16 @@ def main():
         st.error("No se pudo cargar el modelo de detección de puertas")
         st.stop()
     
-    # Mostrar información del modelo
+    # Cargar gestor de alertas
+    alert_manager = load_alert_manager()
+    
+    # Mostrar información del modelo y alertas
     st.sidebar.success("✅ Modelo cargado correctamente")
+    if alert_manager:
+        st.sidebar.success("✅ Sistema de alertas activo")
+    else:
+        st.sidebar.warning("⚠️ Sistema de alertas no disponible")
+    
     st.sidebar.info(f"Clases: {', '.join(model.names.values())}")
     
     # Agregar información sobre umbrales
@@ -346,8 +381,8 @@ def main():
         if uploaded_file is not None:
             # Procesar imagen
             with st.spinner("Analizando imagen..."):
-                annotated_image, detections = process_uploaded_image(
-                    model, uploaded_file, confidence_threshold
+                annotated_image, detections, alert = process_uploaded_image(
+                    model, uploaded_file, confidence_threshold, alert_manager
                 )
             
             # Mostrar resultados
@@ -384,6 +419,25 @@ def main():
             st.subheader("🚨 Estado de Seguridad")
             display_alerts(detections)
             
+            # Mostrar información de alerta si se creó
+            if alert:
+                st.success(f"""
+                ✅ **Alerta creada exitosamente**
+                - ID: {alert.id}
+                - Severidad: {alert.severity.value.upper()}
+                - Mensaje: {alert.message}
+                """)
+                
+                # Mostrar cooldown si aplica
+                if alert_manager and 'cooldown_gate_open' in alert_manager.cooldown_tracker:
+                    cooldown_time = alert_manager.config['cooldown_minutes']
+                    st.info(f"ℹ️ Próxima alerta posible en {cooldown_time} minutos")
+            elif detections and any(d['class_name'] == 'gate_open' for d in detections):
+                if alert_manager:
+                    st.warning("⚠️ Detección registrada pero no se creó alerta (posiblemente en cooldown)")
+                else:
+                    st.info("ℹ️ Sistema de alertas no configurado")
+            
             # Tabla de detecciones
             st.subheader("📋 Detalle de Detecciones")
             display_detections_table(detections)
@@ -408,40 +462,114 @@ def main():
     elif mode == "📈 Estadísticas":
         st.header("Estadísticas del Sistema")
         
-        # Información del modelo
-        st.subheader("📊 Información del Modelo")
-        col1, col2, col3 = st.columns(3)
+        # Tabs para diferentes estadísticas
+        tab1, tab2 = st.tabs(["📊 Modelo", "🚨 Alertas"])
         
-        with col1:
-            st.metric("Precisión (mAP@50)", "99.39%")
-        with col2:
-            st.metric("Velocidad", "30ms/imagen")
-        with col3:
-            st.metric("Tamaño", "15MB")
+        with tab1:
+            # Información del modelo
+            st.subheader("📊 Información del Modelo")
+            col1, col2, col3 = st.columns(3)
+            
+            with col1:
+                st.metric("Precisión (mAP@50)", "99.39%")
+            with col2:
+                st.metric("Velocidad", "30ms/imagen")
+            with col3:
+                st.metric("Tamaño", "15MB")
+            
+            st.markdown("""
+            ### 📈 Métricas de Entrenamiento
+            - **Dataset**: 1,464 imágenes (1,172 train / 292 val)
+            - **Épocas**: 19 (early stopping)
+            - **Tiempo de entrenamiento**: 44 minutos
+            - **Hardware**: MacBook Pro M3
+            """)
+            
+            # Gráfico de ejemplo
+            st.subheader("Rendimiento del Modelo")
+            epochs = list(range(1, 20))
+            mAP50 = [0.5, 0.65, 0.75, 0.82, 0.87, 0.91, 0.93, 0.95, 0.96, 
+                     0.97, 0.98, 0.985, 0.99, 0.992, 0.993, 0.994, 0.994, 0.994, 0.9939]
+            
+            fig = px.line(
+                x=epochs,
+                y=mAP50,
+                title="Evolución de mAP@50 durante el entrenamiento",
+                labels={'x': 'Época', 'y': 'mAP@50'}
+            )
+            fig.add_hline(y=0.95, line_dash="dash", line_color="green", 
+                          annotation_text="Objetivo: 95%")
+            st.plotly_chart(fig, use_container_width=True)
         
-        st.markdown("""
-        ### 📈 Métricas de Entrenamiento
-        - **Dataset**: 1,464 imágenes (1,172 train / 292 val)
-        - **Épocas**: 19 (early stopping)
-        - **Tiempo de entrenamiento**: 44 minutos
-        - **Hardware**: MacBook Pro M3
-        """)
-        
-        # Gráfico de ejemplo
-        st.subheader("Rendimiento del Modelo")
-        epochs = list(range(1, 20))
-        mAP50 = [0.5, 0.65, 0.75, 0.82, 0.87, 0.91, 0.93, 0.95, 0.96, 
-                 0.97, 0.98, 0.985, 0.99, 0.992, 0.993, 0.994, 0.994, 0.994, 0.9939]
-        
-        fig = px.line(
-            x=epochs,
-            y=mAP50,
-            title="Evolución de mAP@50 durante el entrenamiento",
-            labels={'x': 'Época', 'y': 'mAP@50'}
-        )
-        fig.add_hline(y=0.95, line_dash="dash", line_color="green", 
-                      annotation_text="Objetivo: 95%")
-        st.plotly_chart(fig, use_container_width=True)
+        with tab2:
+            st.subheader("🚨 Estadísticas de Alertas")
+            
+            if alert_manager:
+                # Obtener estadísticas
+                stats = alert_manager.get_alert_statistics(hours=24)
+                
+                # Métricas principales
+                col1, col2, col3, col4 = st.columns(4)
+                
+                with col1:
+                    st.metric("Total Alertas (24h)", stats['total_alerts'])
+                with col2:
+                    st.metric("Confianza Promedio", f"{stats['average_confidence']:.1%}")
+                with col3:
+                    critical_count = stats['by_severity'].get('critical', 0)
+                    st.metric("Alertas Críticas", critical_count)
+                with col4:
+                    if stats['last_alert']:
+                        last_alert_time = datetime.fromisoformat(stats['last_alert'])
+                        time_ago = (datetime.now() - last_alert_time).total_seconds() / 60
+                        st.metric("Última Alerta", f"{int(time_ago)} min atrás")
+                    else:
+                        st.metric("Última Alerta", "N/A")
+                
+                # Gráfico por severidad
+                if stats['total_alerts'] > 0:
+                    st.subheader("Distribución por Severidad")
+                    severity_df = pd.DataFrame(
+                        list(stats['by_severity'].items()),
+                        columns=['Severidad', 'Cantidad']
+                    )
+                    fig_severity = px.pie(
+                        severity_df, 
+                        values='Cantidad', 
+                        names='Severidad',
+                        color_discrete_map={
+                            'low': '#90EE90',
+                            'medium': '#FFD700',
+                            'high': '#FF8C00',
+                            'critical': '#FF0000'
+                        }
+                    )
+                    st.plotly_chart(fig_severity, use_container_width=True)
+                    
+                    # Gráfico por hora
+                    st.subheader("Alertas por Hora del Día")
+                    hours_data = [(h, c) for h, c in stats['by_hour'].items()]
+                    hours_df = pd.DataFrame(hours_data, columns=['Hora', 'Alertas'])
+                    fig_hours = px.bar(
+                        hours_df,
+                        x='Hora',
+                        y='Alertas',
+                        title="Distribución de alertas en las últimas 24 horas"
+                    )
+                    st.plotly_chart(fig_hours, use_container_width=True)
+                else:
+                    st.info("No hay alertas registradas en las últimas 24 horas")
+                
+                # Configuración actual
+                with st.expander("⚙️ Configuración de Alertas"):
+                    st.json({
+                        "Cooldown (minutos)": alert_manager.config['cooldown_minutes'],
+                        "Máx. alertas/hora": alert_manager.config['max_alerts_per_hour'],
+                        "Umbrales de severidad": alert_manager.config['severity_thresholds'],
+                        "Horario activo": alert_manager.config['working_hours']
+                    })
+            else:
+                st.warning("Sistema de alertas no disponible")
     
     # Footer
     st.markdown("---")

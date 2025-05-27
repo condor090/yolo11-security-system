@@ -1,0 +1,75 @@
+{
+  "config": {
+    "cooldown_minutes": 5,
+    "max_alerts_per_hour": 10,
+    "severity_thresholds": {
+      "low": 0.5,
+      "medium": 0.65,
+      "high": 0.75,
+      "critical": 0.85
+    },
+    "channels": {
+      "email": {
+        "enabled": false
+      },
+      "telegram": {
+        "enabled": false
+      },
+      "database": {
+        "enabled": true
+      }
+    },
+    "working_hours": {
+      "enabled": false,
+      "start": "08:00",
+      "end": "22:00"
+    }
+  },
+  "alert_history": [
+    {
+      "id": "alert_20250526_232322_0",
+      "type": "gate_open",
+      "severity": "high",
+      "detections": [
+        {
+          "class_name": "gate_open",
+          "confidence": 0.78,
+          "bbox": {
+            "x1": 100,
+            "y1": 200,
+            "x2": 300,
+            "y2": 400
+          },
+          "timestamp": "2025-05-26T23:23:22.297768",
+          "image_path": null
+        }
+      ],
+      "message": "\ud83d\udea8 Puerta abierta detectada con 78.0% de confianza",
+      "timestamp": "2025-05-26T23:23:22.297827",
+      "status": "pending",
+      "channel_results": null,
+      "metadata": {
+        "total_detections": 1,
+        "open_doors": 1,
+        "max_confidence": 0.78
+      }
+    }
+  ],
+  "cooldown_tracker": {
+    "cooldown_gate_open": "2025-05-26T23:23:22.297830"
+  },
+  "statistics": {
+    "total_alerts": 1,
+    "by_severity": {
+      "low": 0,
+      "medium": 0,
+      "high": 1,
+      "critical": 0
+    },
+    "by_hour": {
+      "23": 1
+    },
+    "average_confidence": 0.78,
+    "last_alert": "2025-05-26T23:23:22.297827"
+  }
+}
