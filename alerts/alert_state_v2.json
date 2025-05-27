@@ -1,0 +1,69 @@
+{
+  "config": {
+    "grace_period": {
+      "enabled": true,
+      "default_seconds": 30,
+      "max_seconds": 300,
+      "locations": {
+        "main_entrance": 60,
+        "emergency_exit": 10,
+        "office_door": 45
+      }
+    },
+    "cooldown_minutes": 5,
+    "max_alerts_per_hour": 10,
+    "severity_thresholds": {
+      "low": 0.5,
+      "medium": 0.65,
+      "high": 0.75,
+      "critical": 0.85
+    },
+    "channels": {
+      "email": {
+        "enabled": false
+      },
+      "telegram": {
+        "enabled": false
+      },
+      "database": {
+        "enabled": true
+      }
+    },
+    "working_hours": {
+      "enabled": false,
+      "start": "08:00",
+      "end": "22:00"
+    },
+    "monitoring": {
+      "check_interval_seconds": 5,
+      "stale_threshold_seconds": 60
+    }
+  },
+  "alert_history": [],
+  "cooldown_tracker": {},
+  "monitored_doors": {
+    "b7a673c5-f49a-4de2-be0c-00e7dbd73a22": {
+      "id": "b7a673c5-f49a-4de2-be0c-00e7dbd73a22",
+      "first_detection": "2025-05-26T23:43:08.242583",
+      "last_detection": "2025-05-26T23:43:18.244209",
+      "grace_period_seconds": 60,
+      "location": "main_entrance",
+      "detection_count": 2
+    }
+  },
+  "statistics": {
+    "monitoring": {
+      "monitored_doors": 1,
+      "doors": [
+        {
+          "id": "b7a673c5-f49a-4de2-be0c-00e7dbd73a22",
+          "location": "main_entrance",
+          "monitoring_time": 10,
+          "remaining_grace": 49,
+          "detection_count": 2,
+          "last_confidence": 0.82
+        }
+      ]
+    }
+  }
+}

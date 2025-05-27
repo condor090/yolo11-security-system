@@ -1,0 +1,91 @@
+{
+  "timer_delays": {
+    "default": 30,
+    "entrance": 15,
+    "loading": 300,
+    "emergency": 5,
+    "cam1": 30,
+    "cam2": 60,
+    "cam3": 120
+  },
+  "timer_units": "seconds",
+  "sound_enabled": true,
+  "visual_alerts": true,
+  "cooldown_minutes": 5,
+  "max_alerts_per_hour": 10,
+  "severity_thresholds": {
+    "low": 0.50,
+    "medium": 0.65,
+    "high": 0.75,
+    "critical": 0.85
+  },
+  "channels": {
+    "email": {
+      "enabled": false,
+      "smtp_server": "smtp.gmail.com",
+      "smtp_port": 587,
+      "recipients": ["user@example.com"]
+    },
+    "telegram": {
+      "enabled": false,
+      "bot_token": "YOUR_BOT_TOKEN",
+      "chat_ids": []
+    },
+    "database": {
+      "enabled": true,
+      "path": "database/alerts.db"
+    },
+    "sound": {
+      "enabled": true,
+      "volume": 0.8,
+      "alarm_file": "alerts/sounds/alarm.wav"
+    }
+  },
+  "working_hours": {
+    "enabled": false,
+    "start": "08:00",
+    "end": "22:00",
+    "timezone": "America/Mexico_City"
+  },
+  "capture_settings": {
+    "save_images": true,
+    "image_quality": 85,
+    "max_storage_days": 30
+  },
+  "alert_messages": {
+    "gate_open": {
+      "title": "⏱️ Puerta Abierta Detectada",
+      "template": "Puerta {door_id} abierta. Temporizador: {delay}s"
+    },
+    "gate_timeout": {
+      "title": "🚨 ALARMA ACTIVADA",
+      "template": "Puerta {door_id} abierta por {duration}s. ¡Requiere atención inmediata!"
+    }
+  },
+  "timer_profiles": {
+    "normal": {
+      "description": "Horario normal de operación",
+      "delays": {
+        "default": 30,
+        "entrance": 15,
+        "loading": 300
+      }
+    },
+    "rush_hour": {
+      "description": "Horas pico con más movimiento",
+      "delays": {
+        "default": 60,
+        "entrance": 30,
+        "loading": 300
+      }
+    },
+    "night": {
+      "description": "Horario nocturno - más restrictivo",
+      "delays": {
+        "default": 10,
+        "entrance": 10,
+        "loading": 60
+      }
+    }
+  }
+}
