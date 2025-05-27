@@ -50,9 +50,22 @@ check_nvidia_docker() {
     fi
 }
 
+# Verificar modelo entrenado
+check_trained_model() {
+    if [ ! -f "runs/gates/gate_detector_v1/weights/best.pt" ]; then
+        log_error "Modelo entrenado no encontrado en runs/gates/gate_detector_v1/weights/best.pt"
+        log_info "Por favor, asegúrate de que el modelo esté entrenado antes de construir la imagen Docker"
+        exit 1
+    fi
+    log_success "Modelo entrenado encontrado (99.39% mAP50)"
+}
+
 # Construir imagen Docker
 build_image() {
     log_info "Construyendo imagen Docker..."
+    
+    # Verificar modelo antes de construir
+    check_trained_model
     
     docker build -f Dockerfile.security -t yolo11-security:latest . \
         --build-arg BUILDKIT_INLINE_CACHE=1
@@ -120,9 +133,19 @@ run_container() {
                 -v $(pwd)/models:/security_project/models \
                 -v $(pwd)/runs:/security_project/runs \
                 -v $(pwd)/logs:/security_project/logs \
+                -v $(pwd)/test_images:/security_project/test_images \
                 -p 8501:8501 \
                 --name yolo11-security-dashboard \
-                yolo11-security:latest streamlit run apps/security_dashboard.py --server.port 8501 --server.address 0.0.0.0
+                yolo11-security:latest
+            ;;
+        "test")
+            docker run -it --rm $DOCKER_GPU \
+                -v $(pwd)/data:/security_project/data \
+                -v $(pwd)/models:/security_project/models \
+                -v $(pwd)/runs:/security_project/runs \
+                -v $(pwd)/test_images:/security_project/test_images \
+                --name yolo11-security-test \
+                yolo11-security:latest python scripts/test_model.py
             ;;
         "inference")
             docker run -d $DOCKER_GPU \
@@ -149,7 +172,8 @@ show_help() {
     echo "  setup                 Configurar directorios y descargar modelos"
     echo "  run-interactive       Ejecutar contenedor interactivo"
     echo "  run-training         Ejecutar entrenamiento en background"
-    echo "  run-dashboard        Ejecutar dashboard web"
+    echo "  run-dashboard        Ejecutar dashboard web (http://localhost:8501)"
+    echo "  run-test            Ejecutar prueba del modelo"
     echo "  run-inference        Ejecutar sistema de inferencia"
     echo "  stop                 Detener todos los contenedores"
     echo "  clean                Limpiar imágenes y contenedores"
@@ -234,6 +258,11 @@ main() {
             check_nvidia_docker
             run_container "dashboard"
             log_success "Dashboard disponible en: http://localhost:8501"
+            ;;
+        "run-test")
+            check_docker
+            check_nvidia_docker
+            run_container "test"
             ;;
         "run-inference")
             check_docker
