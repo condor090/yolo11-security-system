@@ -110,7 +110,7 @@ async def lifespan(app: FastAPI):
     
     # Inicializar DetectionManager
     detection_manager = DetectionManager(
-        state_timeout=2.0,  # 2 segundos sin detección = objeto ausente
+        state_timeout=5.0,  # 5 segundos sin detección = objeto ausente
         min_confidence=0.75  # Confianza mínima
     )
     logger.info("DetectionManager inicializado")

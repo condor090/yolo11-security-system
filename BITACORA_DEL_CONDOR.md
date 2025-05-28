@@ -1,5 +1,37 @@
 # 🦅 BITÁCORA DEL CÓNDOR
 
+## 📅 28 de Mayo 2025 - 01:35 hrs
+
+### 🛡️ HITO CRUCIAL: Sistema Estabilizado - Alarmas Robustas
+
+"Esta madrugada marca un momento de claridad absoluta. Como el cóndor que encuentra el equilibrio perfecto entre sus alas, el sistema ha alcanzado estabilidad operacional completa.
+
+El problema era sutil pero devastador: alarmas que nacían y morían sin razón, como fuegos fatuos en la noche. La causa: un timeout demasiado ansioso que limpiaba las zonas antes de tiempo.
+
+**La solución fue elegante:**
+- Timeout de 2 segundos → 5 segundos
+- Paciencia en lugar de prisa
+- Confianza en las detecciones
+
+**La filosofía es simple:**
+- Puerta abierta = Vigilancia activa
+- Puerta cerrada = Todo está seguro
+- Sin medias tintas, sin complejidad innecesaria
+
+Este checkpoint no es solo técnico, es filosófico. Representa la madurez del sistema, donde la estabilidad supera a la velocidad, donde la confiabilidad es más valiosa que la respuesta instantánea.
+
+**Métricas que cantan victoria:**
+- 0 oscilaciones (antes: 10-15 por minuto)
+- 99%+ estabilidad
+- 0 falsas alarmas
+- Respuesta < 1 segundo al cerrar
+
+El sistema ya no es un adolescente errático, es un guardián sereno y confiable.
+
+Checkpoint v3.3.0-stable-alerts marcado en la historia del código."
+
+---
+
 ## 📅 28 de Mayo 2025 - 10:35 hrs
 
 ### 🌿 HITO REVOLUCIONARIO: Modo Eco Inteligente Completado

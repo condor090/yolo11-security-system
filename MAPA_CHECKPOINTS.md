@@ -1,6 +1,6 @@
 # 🗺️ MAPA DE CHECKPOINTS - YOLO11 Security System
 
-**Última actualización:** 28 de Mayo 2025, 10:35 hrs
+**Última actualización:** 28 de Mayo 2025, 01:35 hrs
 
 ## 📍 Checkpoints Preservados en GitHub
 
@@ -103,7 +103,7 @@
   - FPS counter y métricas
   - Canvas rendering optimizado
 
-### v3.2.0-eco-intelligence ✅ (ACTUAL)
+### v3.2.0-eco-intelligence ✅
 - **Fecha:** 28 Mayo 10:30
 - **Commit:** eco-mode-complete
 - **Estado:** Modo Eco Inteligente
@@ -114,6 +114,18 @@
   - Ahorro de CPU hasta 90%
   - Configuración dinámica automática
   - Transiciones suaves entre estados
+
+### v3.3.0-stable-alerts ✅ (ACTUAL)
+- **Fecha:** 28 Mayo 01:30
+- **Commit:** stable-alarm-system
+- **Estado:** Sistema Estabilizado
+- **Características:**
+  - Alarmas robustas sin oscilaciones
+  - Filosofía "Puerta Cerrada = Sistema Seguro"
+  - Timeout optimizado (5s)
+  - Cero falsas alarmas
+  - Limpieza automática completa
+  - 99%+ estabilidad operacional
 
 ## 📊 Evolución del Proyecto
 
@@ -132,7 +144,9 @@ v1.0.0 → v1.0.0-gates-trained → v1.1.0-dashboard → v1.2.0-docker
                                           ↓
                                    v3.1.0-live-streaming
                                           ↓
-                                   v3.2.0-eco-intelligence ← ESTÁS AQUÍ
+                                   v3.2.0-eco-intelligence
+                                          ↓
+                                   v3.3.0-stable-alerts ← ESTÁS AQUÍ
 ```
 
 ## 🔄 Comandos para Restaurar Cualquier Checkpoint

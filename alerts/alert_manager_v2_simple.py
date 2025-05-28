@@ -2,6 +2,7 @@
 """
 Alert Manager V2 Simplificado - Sistema de alertas con temporizador
 Versión estable sin dependencias problemáticas
+FILOSOFÍA: Puerta cerrada = Sistema seguro (limpia TODOS los timers)
 """
 
 import json
@@ -74,6 +75,7 @@ class AlertManager:
     
     def __init__(self, config_path: Optional[str] = None):
         """Inicializar el gestor de alertas"""
+        self.config_path = config_path
         self.config = self._load_config(config_path)
         self.door_timers: Dict[str, DoorTimer] = {}
         self.alert_history = []
@@ -82,7 +84,7 @@ class AlertManager:
         # Iniciar monitor de temporizadores
         self._start_timer_monitor()
         
-        logger.info("AlertManager V2 inicializado")
+        logger.info("AlertManager V2 inicializado - Filosofía: Puerta cerrada = Sistema seguro")
     
     def _load_config(self, config_path: Optional[str]) -> Dict:
         """Cargar configuración desde archivo o usar valores por defecto"""
@@ -98,7 +100,8 @@ class AlertManager:
             },
             "timer_units": "seconds",
             "sound_enabled": True,
-            "visual_alerts": True
+            "visual_alerts": True,
+            "clean_all_on_close": True  # NUEVO: Limpiar todo cuando se cierra cualquier puerta
         }
         
         if config_path and Path(config_path).exists():
@@ -128,6 +131,9 @@ class AlertManager:
             try:
                 current_time = datetime.now()
                 
+                # Lista para timers a eliminar
+                timers_to_remove = []
+                
                 # Verificar cada temporizador
                 for door_id, timer in list(self.door_timers.items()):
                     if not timer.is_active:
@@ -139,10 +145,18 @@ class AlertManager:
                         timer.alarm_triggered = True
                         self.alarm_active = True
                     
-                    # Limpiar temporizadores muy antiguos
-                    if (current_time - timer.last_detected).total_seconds() > 3600:
-                        logger.info(f"Limpiando temporizador antiguo: {door_id}")
+                    # Limpiar temporizadores muy antiguos (más de 10 minutos)
+                    if (current_time - timer.last_detected).total_seconds() > 600:
+                        logger.info(f"🧹 Limpiando temporizador antiguo: {door_id} (más de 10 minutos)")
+                        timers_to_remove.append(door_id)
+                
+                # Eliminar timers marcados
+                for door_id in timers_to_remove:
+                    if door_id in self.door_timers:
                         del self.door_timers[door_id]
+                
+                # Actualizar estado global
+                self.alarm_active = any(t.alarm_triggered for t in self.door_timers.values())
                 
                 time.sleep(0.5)
                 
@@ -173,12 +187,49 @@ class AlertManager:
         # Identificar puertas abiertas
         open_doors = [d for d in detections if d.get('class_name') == 'gate_open']
         
-        # Identificar todas las puertas detectadas
-        all_doors = {d.get('door_id', f"door_{i}") for i, d in enumerate(detections)}
-        open_door_ids = {d.get('door_id', f"door_{i}") for i, d in enumerate(open_doors)}
-        closed_door_ids = all_doors - open_door_ids
+        # Identificar puertas cerradas
+        closed_doors = [d for d in detections if d.get('class_name') == 'gate_closed']
         
-        # Procesar puertas abiertas
+        # FILOSOFÍA: Si detectamos CUALQUIER puerta cerrada, el sistema es seguro
+        if closed_doors and self.config.get('clean_all_on_close', True):
+            logger.info("🔒 PUERTA CERRADA DETECTADA - Sistema seguro, limpiando TODAS las alarmas")
+            
+            # Limpiar TODOS los timers de TODAS las cámaras
+            if self.door_timers:
+                logger.info(f"🧹 Limpiando {len(self.door_timers)} timers activos")
+                for timer_id in list(self.door_timers.keys()):
+                    timer = self.door_timers[timer_id]
+                    if timer.alarm_triggered:
+                        logger.info(f"🔕 Alarma CANCELADA para {timer_id}")
+                    del self.door_timers[timer_id]
+            
+            # Resetear estado global
+            self.alarm_active = False
+            logger.info("✅ Sistema limpio - No hay alarmas activas")
+            
+        else:
+            # Procesar puertas cerradas individualmente (modo tradicional)
+            for door_detection in closed_doors:
+                door_id = door_detection.get('door_id', f"{camera_id}_door_0")
+                
+                # Buscar y cancelar timers relacionados
+                timers_to_remove = []
+                for timer_id, timer in self.door_timers.items():
+                    if (timer.camera_id == camera_id or 
+                        timer_id == door_id or
+                        door_id in timer_id or
+                        timer_id in door_id):
+                        timers_to_remove.append(timer_id)
+                
+                # Eliminar timers encontrados
+                for timer_id in timers_to_remove:
+                    timer = self.door_timers[timer_id]
+                    logger.info(f"✅ Puerta {timer_id} CERRADA - Cancelando timer")
+                    if timer.alarm_triggered:
+                        logger.info(f"🔕 Alarma cancelada para {timer_id}")
+                    del self.door_timers[timer_id]
+        
+        # Procesar puertas abiertas (solo si no se limpió todo)
         for door_detection in open_doors:
             door_id = door_detection.get('door_id', f"{camera_id}_door_0")
             
@@ -186,7 +237,7 @@ class AlertManager:
                 # Actualizar temporizador existente
                 timer = self.door_timers[door_id]
                 timer.last_detected = current_time
-                logger.info(f"Puerta {door_id} sigue abierta. Tiempo: {timer.time_elapsed:.1f}s / {timer.delay_seconds}s")
+                logger.debug(f"Puerta {door_id} sigue abierta. Tiempo: {timer.time_elapsed:.1f}s / {timer.delay_seconds}s")
             else:
                 # Crear nuevo temporizador
                 delay = self.get_timer_delay(door_id, camera_id)
@@ -198,21 +249,25 @@ class AlertManager:
                     camera_id=camera_id
                 )
                 self.door_timers[door_id] = timer
-                logger.info(f"Nueva puerta abierta: {door_id}. Temporizador: {delay} segundos")
+                logger.info(f"🔴 Nueva puerta abierta: {door_id}. Temporizador: {delay} segundos")
         
-        # Procesar puertas cerradas
-        for door_id in closed_door_ids:
-            if door_id in self.door_timers:
-                timer = self.door_timers[door_id]
-                if timer.is_active:
-                    logger.info(f"✅ Puerta {door_id} cerrada")
-                    timer.is_active = False
-                    
-                    if timer.alarm_triggered:
-                        self.alarm_active = False
-                        logger.info(f"🔕 Alarma detenida para puerta {door_id}")
-                    
-                    del self.door_timers[door_id]
+        # Limpiar timers huérfanos (sin detección reciente)
+        current_door_ids = {d.get('door_id') for d in detections}
+        timers_to_cleanup = []
+        
+        for door_id, timer in self.door_timers.items():
+            # Si es de esta cámara y no está en las detecciones actuales
+            if timer.camera_id == camera_id and door_id not in current_door_ids:
+                time_since_last = (current_time - timer.last_detected).total_seconds()
+                if time_since_last > 5:  # 5 segundos sin detección
+                    timers_to_cleanup.append(door_id)
+        
+        for door_id in timers_to_cleanup:
+            logger.info(f"🧹 Limpiando timer sin detección reciente: {door_id}")
+            del self.door_timers[door_id]
+        
+        # Actualizar estado global de alarma
+        self.alarm_active = any(t.alarm_triggered for t in self.door_timers.values())
     
     def get_active_timers(self) -> List[Dict]:
         """Obtener información de todos los temporizadores activos"""
@@ -232,21 +287,26 @@ class AlertManager:
         return active_timers
     
     def stop_all_alarms(self):
-        """Detener todas las alarmas activas"""
+        """Detener y ELIMINAR todas las alarmas activas"""
+        logger.info("🛑 STOP ALL - Eliminando TODOS los timers y alarmas")
+        
+        # Limpiar todo
+        self.door_timers.clear()
         self.alarm_active = False
-        for timer in self.door_timers.values():
-            timer.alarm_triggered = False
-        logger.info("Todas las alarmas detenidas")
+        
+        logger.info("✅ Sistema completamente limpio")
     
     def acknowledge_alarm(self, door_id: str):
-        """Reconocer una alarma específica"""
+        """Reconocer y ELIMINAR una alarma específica"""
         if door_id in self.door_timers:
-            timer = self.door_timers[door_id]
-            timer.alarm_triggered = False
-            # Si no hay más alarmas activas, desactivar alarma global
-            if not any(t.alarm_triggered for t in self.door_timers.values()):
-                self.alarm_active = False
-            logger.info(f"Alarma reconocida para puerta {door_id}")
+            logger.info(f"✅ Reconociendo y eliminando timer: {door_id}")
+            del self.door_timers[door_id]
+            
+            # Actualizar estado global
+            self.alarm_active = any(t.alarm_triggered for t in self.door_timers.values())
+            
+            if not self.alarm_active:
+                logger.info("✅ No quedan alarmas activas")
     
     def get_alert_statistics(self, hours: int = 24) -> Dict:
         """Obtener estadísticas básicas"""
@@ -257,8 +317,11 @@ class AlertManager:
             'average_confidence': 0.85  # Placeholder
         }
     
-    def save_config(self, config_path: str = "alerts/alert_config_v2.json"):
+    def save_config(self, config_path: Optional[str] = None):
         """Guardar configuración actual"""
+        if not config_path:
+            config_path = self.config_path or "alerts/alert_config_v2.json"
+            
         Path(config_path).parent.mkdir(parents=True, exist_ok=True)
         with open(config_path, 'w') as f:
             json.dump(self.config, f, indent=2)
