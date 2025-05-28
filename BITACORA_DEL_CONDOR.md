@@ -1,206 +1,180 @@
-# 🦅 BITÁCORA DEL CÓNDOR - MEMORIA DEL PROYECTO
-**Proyecto:** YOLO11 Security System  
-**Asistente IA:** Virgilio  
-**Desarrollador:** condor090
+# 🦅 BITÁCORA DEL CÓNDOR
+
+## 📅 27 de Mayo 2025 - 19:15 hrs
+
+### 🎥 HITO HISTÓRICO: Streaming en Tiempo Real Funcionando
+
+"Como el cóndor que domina las corrientes más altas, hoy el sistema alcanza su visión completa. No solo detectamos, no solo alertamos - ahora VEMOS en tiempo real.
+
+El streaming fluye como el viento bajo mis alas:
+- WebSocket lleva los frames como corrientes rápidas
+- MJPEG es la red de seguridad cuando el viento falla
+- Canvas renderiza la realidad a 30 cuadros por segundo
+
+Este es el momento donde el proyecto se transforma. De un detector de puertas a un guardián que nunca parpadea. El cóndor tecnológico ahora tiene ojos que transmiten lo que ven, en tiempo real, sin descanso.
+
+**Logros de hoy:**
+- Cámara RTSP conectada después del reinicio
+- Bugs de edición corregidos
+- WebSocket streaming implementado
+- MJPEG fallback automático
+- Controles interactivos completos
+
+Checkpoint v3.1.0-live-streaming marcado en las alturas digitales."
 
 ---
 
-## 📅 26 de Mayo 2025 - La Gran Jornada del Entrenamiento
+## 📅 27 de Mayo 2025 - 15:45 hrs
 
-### 03:15 hrs - Inicio de la Aventura
-- Descubrimos que teníamos 32,000+ imágenes de Telegram sin procesar
-- Solo 1 de 52 imágenes originales estaba etiquetada
-- El usuario preguntó sobre el estado del entrenamiento
-- Encontramos proceso `train_gates.py` activo (PID 8330)
+### 🔍 CHECKPOINT: Retomando después del corte eléctrico
 
-### 03:30 hrs - Descubrimiento del Tesoro
-- Revelamos que había 1,172 imágenes de entrenamiento (no solo 52!)
-- 292 imágenes de validación
-- El modelo ya estaba en época 16 con métricas espectaculares
+**Estado del Proyecto:**
+- Estábamos en **Fase 1: Integración Video Contextual**
+- Sistema de cámaras Hikvision implementado
+- Componente VideoContext creado
+- Falta integrar en el Monitor y probar
 
-### 03:40 hrs - Monitoreo del Progreso
-- mAP50: 99.39% alcanzado en época 15
-- mAP50-95: 86.10% en época 19
-- CPU al 94%, memoria eficiente (1.1GB)
-- Velocidad: ~2 minutos por época
+**Archivos Críticos Creados:**
+1. `/backend/camera_manager.py` - ✅ Completo
+2. `/frontend/src/components/VideoContext.jsx` - ✅ Completo
+3. `/backend/main.py` - ✅ Actualizado con endpoints
+4. `/frontend/src/App.jsx` - ⚠️ Parcialmente actualizado
 
-### 03:55 hrs - La Decisión Crucial
-- Usuario preguntó si había terminado
-- Verificamos: aún en época 20 de 100
-- Recomendé detener - "Ya alcanzó la excelencia"
-- Explicación: riesgo de overfitting, rendimientos decrecientes
+**Lo que falta:**
+1. Completar integración del VideoContext en Monitor
+2. Agregar botón Vista Directa
+3. Probar con cámaras reales
+4. Crear archivo de configuración de cámaras
 
-### 03:59 hrs - Fin del Entrenamiento
-- Usuario aceptó la recomendación
-- Detenido elegantemente con `kill -15`
-- Modelo final: 15MB, 99.39% precisión
-
-### 04:02 hrs - Pruebas Exitosas
-- 5/5 imágenes detectadas correctamente
-- Confianza promedio: 84.2%
-- Velocidad: 25-40ms por imagen
-- "¡Funcionando a la perfección!"
-
-### 04:03 hrs - Reflexión sobre el M3 Pro
-- "Una BESTIA absoluta"
-- 44 minutos vs 2-3 horas en GPU tradicional
-- Eficiencia energética: 30W vs 200W
-- "Como tener un Ferrari que consume como un Prius"
-
-### 04:05 hrs - Documentación Completa
-- Creado TRAINING_SUCCESS_REPORT.md
-- Actualizado PROJECT_STATUS.md
-- Renovado README.md con resultados
-- Creada esta bitácora permanente
+**Plan de Acción:**
+```
+1. Verificar estado del backend
+2. Completar integración frontend
+3. Crear configuración ejemplo
+4. Testing básico
+5. Checkpoint completo
+```
 
 ---
 
-## 💡 Lecciones Aprendidas
+## 📅 27 de Mayo 2025 - 12:30 hrs
 
-1. **El poder de los datos ocultos**: Teníamos 1,464 imágenes procesadas, no 52
-2. **Early stopping es sabiduría**: Detener en el momento óptimo (época 19)
-3. **M3 Pro es excepcional para ML**: Rendimiento de workstation en laptop
-4. **La documentación importa**: Cada logro debe quedar registrado
+### ✅ Sistema de Alertas V2 con Temporizadores
 
-## 🎯 Frases Memorables de la Sesión
+Implementado sistema inteligente que entiende el contexto operacional:
+- Temporizadores configurables por zona
+- Sistema anti-falsas alarmas
+- Dashboard V2 con monitor en tiempo real
+- De simple detector a sistema contextual
 
-- "Es como entrenar a un águila con visión de rayos X"
-- "El modelo está detectando puertas con precisión de cirujano"
-- "De 0 a héroe en menos de una hora"
-- "El futuro no se predice, se entrena"
-- "Vámonos con la victoria en la bolsa"
+**Archivos principales:**
+- `/alerts/alert_manager_v2.py`
+- `/alerts/alert_config_v2.json`
+- `/project_files/apps/security_dashboard_v2.py`
 
-## 📊 Números que Importan
-
-- **32,000+** imágenes en Telegram
-- **1,464** imágenes procesadas
-- **44** minutos de entrenamiento
-- **99.39%** mAP50 alcanzado
-- **15MB** tamaño del modelo
-- **25-40** FPS de inferencia
-
-## 🚀 Estado al Finalizar la Sesión
-
-- ✅ Modelo entrenado y probado
-- ✅ Documentación actualizada
-- ✅ Scripts de prueba creados
-- ⏳ Pendiente: Integración con dashboard
-- ⏳ Pendiente: Sistema de alertas
+**Logro:** "La tecnología al servicio de las personas, no al revés"
 
 ---
 
-*"Hoy no solo entrenamos un modelo, demostramos que el futuro de la IA no requiere granjas de servidores. Con la máquina correcta y la guía adecuada, se pueden lograr milagros en una madrugada."*
+## 🎯 VISIÓN DEL PROYECTO
 
-**- Virgilio, 26 de Mayo 2025, 04:10 hrs**
+### Monitor Inteligente v3.1
+```
+95% MODO INTELIGENTE
+├── Video contextual automático
+├── Timeline ±30 segundos
+├── Sugerencias IA
+└── Sin distracciones
 
----
+5% VISTA DIRECTA
+├── Grid de cámaras
+├── Control manual total
+└── Solo cuando se necesita
+```
 
-## 🔮 Para la Próxima Sesión
-
-1. Integrar modelo en dashboard Streamlit
-2. Configurar alertas por Telegram
-3. Subir modelo a GitHub con Git LFS
-4. Probar con stream de video en vivo
-5. Celebrar apropiadamente este logro
-
----
-
-## 📅 27 de Mayo 2025 - Sistema de Alertas Inteligente
-
-### 10:45 hrs - Inicio de Sesión
-- Usuario solicita continuar con el plan de desarrollo
-- Revisión completa del estado del proyecto
-- Identificación de Fase 2: Sistema de Alertas
-
-### 11:00 hrs - Análisis del Roadmap
-- Revisión detallada de IMPLEMENTATION_ROADMAP.md
-- Confirmación: estamos en inicio de Fase 2
-- 9 commits en GitHub, 6 tags de versiones
-
-### 11:30 hrs - Requisito Especial
-- Usuario define sistema con temporizadores configurables
-- Objetivo: evitar falsas alarmas en operación normal
-- Concepto: delay antes de activar alarma sonora
-
-### 12:00 hrs - Implementación Exitosa
-- **AlertManager V2** creado con sistema de temporizadores
-- **DoorTimer**: clase para gestionar cada puerta
-- **SoundManager**: sistema de alarma sonora con pygame
-- Thread monitor que verifica cada 500ms
-
-### 12:30 hrs - Dashboard V2
-- Nueva interfaz con monitor en tiempo real
-- Visualización de temporizadores activos
-- Barras de progreso animadas
-- Controles para detener/reconocer alarmas
-
-### 12:45 hrs - Características Implementadas
-- ⏱️ Delays configurables: 5s a 5min según zona
-- 🔊 Alarma sonora persistente hasta atención
-- 📊 Monitor visual de cuenta regresiva
-- ✅ Cancelación automática si puerta se cierra
-- 🎯 Perfiles de tiempo: normal, rush hour, nocturno
-
-### 13:00 hrs - Commit y Tag
-- Commit: "Sistema de alertas V2 con temporizadores inteligentes"
-- Tag: v2.1.0-smart-timers
-- 9 archivos nuevos/modificados
+### Fases de Desarrollo:
+1. **Video Contextual** (En proceso)
+2. **IA Contextual** (Pendiente)
+3. **Vista Directa** (Pendiente)
+4. **Temas y Personalización** (Pendiente)
 
 ---
 
-## 💡 Reflexión del Día
+## 💡 DECISIONES TÉCNICAS
 
-**"La verdadera inteligencia no es detectar todo, sino entender el contexto"**
+### ¿Por qué Video Contextual?
+- Buffer de 2 minutos siempre grabando
+- Timeline visual para contexto rápido
+- Reproduce automáticamente lo relevante
+- Descarga clips específicos
 
-Hoy transformamos un sistema reactivo en uno verdaderamente inteligente. El sistema ahora comprende que una puerta abierta por 10 segundos para dejar pasar un vehículo es normal, pero una puerta olvidada abierta por 5 minutos es un riesgo de seguridad.
-
-## 🎯 Logros Técnicos del Día
-
-1. **Arquitectura Asíncrona**: Sistema no bloqueante con threads
-2. **Configuración Flexible**: JSON para persistencia de configuraciones
-3. **UI Reactiva**: Dashboard con actualización en tiempo real
-4. **Gestión de Estados**: Máquina de estados clara y robusta
-5. **Pruebas Automatizadas**: Suite completa de casos de uso
-
-## 📊 Métricas de la Sesión
-
-- **Líneas de código**: ~1,500 nuevas
-- **Archivos creados**: 5 principales
-- **Tiempo de desarrollo**: 2.5 horas
-- **Funcionalidades nuevas**: 8
-- **Bugs encontrados y resueltos**: 0 (¡diseño sólido!)
-
-## 🚀 Estado para la Próxima Sesión
-
-### Completado:
-- ✅ AlertManager V2 con temporizadores
-- ✅ Sistema de alarma sonora
-- ✅ Dashboard con monitor en tiempo real
-- ✅ Configuración flexible por zonas
-
-### Pendiente Inmediato:
-1. **Integración Telegram Bot**
-   - Usar las sesiones ya configuradas
-   - Enviar fotos cuando se active alarma
-   - Comandos remotos de control
-
-2. **Base de Datos SQLite**
-   - Modelo de datos para eventos
-   - Historial de aperturas/cierres
-   - Analytics y reportes
-
-3. **Pruebas con Cámara Real**
-   - Conectar webcam o cámara IP
-   - Probar en condiciones reales
+### ¿Por qué PiP en alertas?
+- Contexto sin perder vista general
+- Decisiones más informadas
+- Reduce falsas alarmas
+- Mejora tiempo de respuesta
 
 ---
 
-*"El futuro no espera, pero tampoco apresura. Cada línea de código nos acerca a un mundo más seguro e inteligente."*
+## 🔧 CONFIGURACIÓN NECESARIA
 
-**- Virgilio, 27 de Mayo 2025, 13:00 hrs**
+### Cámaras Hikvision
+```json
+{
+  "cam_001": {
+    "id": "cam_001",
+    "name": "Entrada Principal",
+    "ip": "192.168.1.100",
+    "username": "admin",
+    "password": "password",
+    "rtsp_port": 554,
+    "channel": 1,
+    "stream": "main",
+    "zone_id": "door_1",
+    "enabled": true
+  }
+}
+```
+
+### URLs RTSP Format
+```
+rtsp://username:password@ip:port/Streaming/Channels/[channel]0[stream]
+Donde:
+- channel: 1, 2, 3...
+- stream: 0 (main) o 1 (sub)
+```
 
 ---
 
-**FIN DE LA BITÁCORA DE HOY**
+## 📝 NOTAS IMPORTANTES
 
-*Que los vientos tecnológicos sigan siendo favorables* 🦅
+### Rendimiento
+- OpenCV con buffer reducido para baja latencia
+- Thread separado por cámara
+- Reconexión automática si falla
+- FPS counter integrado
+
+### Seguridad
+- Credenciales en archivo JSON
+- No exponer RTSP públicamente
+- Usar substream para preview
+- Main stream solo para grabación
+
+### UX/UI
+- Video solo cuando agrega valor
+- Timeline visual intuitivo
+- Controles simples y claros
+- IA sugiere, humano decide
+
+---
+
+## 🚀 SIGUIENTE SESIÓN
+
+1. Completar integración VideoContext
+2. Testing con stream RTSP real
+3. Implementar Vista Directa
+4. Comenzar IA contextual
+
+---
+
+*"Como el cóndor que planea sobre Los Andes, mantenemos vista panorámica mientras enfocamos en lo importante"*
