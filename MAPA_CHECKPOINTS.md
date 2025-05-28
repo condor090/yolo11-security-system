@@ -1,6 +1,6 @@
 # 🗺️ MAPA DE CHECKPOINTS - YOLO11 Security System
 
-**Última actualización:** 27 de Mayo 2025, 18:50 hrs
+**Última actualización:** 28 de Mayo 2025, 10:35 hrs
 
 ## 📍 Checkpoints Preservados en GitHub
 
@@ -91,7 +91,7 @@
   - Buffer circular 2 minutos
   - Sistema completo funcionando
 
-### v3.1.0-live-streaming ✅ (ACTUAL)
+### v3.1.0-live-streaming ✅
 - **Fecha:** 27 Mayo 19:10
 - **Commit:** 1067bcd
 - **Estado:** Streaming en tiempo real
@@ -102,6 +102,18 @@
   - Vista multi-cámara
   - FPS counter y métricas
   - Canvas rendering optimizado
+
+### v3.2.0-eco-intelligence ✅ (ACTUAL)
+- **Fecha:** 28 Mayo 10:30
+- **Commit:** eco-mode-complete
+- **Estado:** Modo Eco Inteligente
+- **Características:**
+  - Sistema adaptativo de recursos
+  - Tres estados: IDLE, ALERT, ACTIVE
+  - Detección de movimiento inteligente
+  - Ahorro de CPU hasta 90%
+  - Configuración dinámica automática
+  - Transiciones suaves entre estados
 
 ## 📊 Evolución del Proyecto
 
@@ -118,7 +130,9 @@ v1.0.0 → v1.0.0-gates-trained → v1.1.0-dashboard → v1.2.0-docker
                                           ↓
                                    v3.0.0-camera-rtsp
                                           ↓
-                                   v3.1.0-live-streaming ← ESTÁS AQUÍ
+                                   v3.1.0-live-streaming
+                                          ↓
+                                   v3.2.0-eco-intelligence ← ESTÁS AQUÍ
 ```
 
 ## 🔄 Comandos para Restaurar Cualquier Checkpoint
@@ -141,8 +155,10 @@ git checkout main
 
 1. **CHECKPOINT_CAMERA_RTSP.md** - Documentación completa v3.0.0-camera-rtsp
 2. **CHECKPOINT_VIDEO_CONTEXT.md** - Implementación video contextual
-3. **progress.md** - Progreso continuo del proyecto
-4. **BITACORA_DEL_CONDOR.md** - Bitácora completa del desarrollo
+3. **CHECKPOINT_LIVE_STREAMING.md** - Streaming en tiempo real
+4. **CHECKPOINT_ECO_MODE.md** - Modo Eco Inteligente (NUEVO)
+5. **progress.md** - Progreso continuo del proyecto
+6. **BITACORA_DEL_CONDOR.md** - Bitácora completa del desarrollo
 
 ## 🎯 Resumen de Progreso
 
@@ -153,4 +169,4 @@ git checkout main
 
 ---
 
-**Bitácora del Cóndor**: "9 checkpoints preservados, cada uno marcando una altura alcanzada en nuestro vuelo tecnológico."
+**Bitácora del Cóndor**: "10 checkpoints preservados, cada uno marcando una altura alcanzada en nuestro vuelo tecnológico. El Modo Eco representa la madurez del sistema, como el cóndor que ha aprendido a usar las corrientes para volar sin esfuerzo."

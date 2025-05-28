@@ -34,6 +34,13 @@ import sys
 sys.path.append(str(Path(__file__).parent.parent))
 from alerts.alert_manager_v2_simple import AlertManager, DoorTimer
 from backend.camera_manager import CameraManager, CameraConfig
+from backend.utils.detection_manager import DetectionManager
+from backend.utils.eco_mode import EcoModeManager, SystemState
+try:
+    from backend.optimized_config import DETECTION_CONFIG, RESOURCE_CONFIG
+except ImportError:
+    DETECTION_CONFIG = {"interval": 0.5, "max_fps": 30, "jpeg_quality": 70}
+    RESOURCE_CONFIG = {"max_workers": 4}
 
 # Manager de conexiones WebSocket
 class ConnectionManager:
@@ -71,12 +78,14 @@ manager = ConnectionManager()
 model: Optional[YOLO] = None
 alert_manager: Optional[AlertManager] = None
 camera_manager: Optional[CameraManager] = None
+detection_manager: Optional[DetectionManager] = None
+eco_manager: Optional[EcoModeManager] = None
 monitoring_active = False
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     """Gestión del ciclo de vida de la aplicación"""
-    global model, alert_manager, camera_manager
+    global model, alert_manager, camera_manager, detection_manager, eco_manager
     
     # Startup
     logger.info("Iniciando backend...")
@@ -98,6 +107,17 @@ async def lifespan(app: FastAPI):
     camera_manager = CameraManager()
     camera_manager.start_all()
     logger.info("CameraManager inicializado")
+    
+    # Inicializar DetectionManager
+    detection_manager = DetectionManager(
+        state_timeout=2.0,  # 2 segundos sin detección = objeto ausente
+        min_confidence=0.75  # Confianza mínima
+    )
+    logger.info("DetectionManager inicializado")
+    
+    # Inicializar EcoModeManager
+    eco_manager = EcoModeManager()
+    logger.info("Modo Eco inicializado en estado IDLE")
     
     # Iniciar monitor de temporizadores
     asyncio.create_task(timer_monitor())
@@ -250,6 +270,10 @@ async def stop_all_alarms():
     
     alert_manager.stop_all_alarms()
     
+    # También resetear el detection manager
+    if detection_manager:
+        detection_manager.reset_all()
+    
     # Broadcast
     await manager.broadcast({
         'type': 'alarms_stopped',
@@ -296,7 +320,76 @@ async def get_statistics():
     stats = alert_manager.get_alert_statistics(hours=24)
     stats['websocket_clients'] = len(manager.active_connections)
     
+    # Agregar estado de zonas
+    if detection_manager:
+        stats['zone_states'] = detection_manager.get_zone_states()
+    
     return {"statistics": stats}
+
+@app.get("/api/zones")
+async def get_zones():
+    """Obtener estado de todas las zonas"""
+    if not detection_manager:
+        return {"zones": {}}
+    
+    return {"zones": detection_manager.get_zone_states()}
+
+@app.get("/api/eco-mode")
+async def get_eco_mode():
+    """Obtener estado del Modo Eco"""
+    if not eco_manager:
+        return {"eco_mode": {"enabled": False}}
+    
+    return {
+        "eco_mode": {
+            "enabled": True,
+            "status": eco_manager.get_status(),
+            "current_state": eco_manager.current_state.value,
+            "settings": {
+                "idle_timeout": eco_manager.idle_timeout,
+                "alert_timeout": eco_manager.alert_timeout,
+                "motion_threshold": eco_manager.motion_threshold
+            }
+        }
+    }
+
+@app.put("/api/eco-mode")
+async def update_eco_mode(settings: dict):
+    """Actualizar configuración del Modo Eco"""
+    if not eco_manager:
+        raise HTTPException(status_code=503, detail="Modo Eco no disponible")
+    
+    try:
+        # Actualizar timeouts
+        if 'idle_timeout' in settings:
+            eco_manager.idle_timeout = float(settings['idle_timeout'])
+        
+        if 'alert_timeout' in settings:
+            eco_manager.alert_timeout = float(settings['alert_timeout'])
+        
+        if 'motion_threshold' in settings:
+            eco_manager.motion_threshold = float(settings['motion_threshold'])
+        
+        # Forzar estado si se especifica
+        if 'force_state' in settings:
+            state_map = {
+                'idle': SystemState.IDLE,
+                'alert': SystemState.ALERT,
+                'active': SystemState.ACTIVE
+            }
+            if settings['force_state'] in state_map:
+                eco_manager.current_state = state_map[settings['force_state']]
+        
+        # Broadcast actualización
+        await manager.broadcast({
+            'type': 'eco_mode_updated',
+            'data': eco_manager.get_status()
+        })
+        
+        return {"success": True, "message": "Modo Eco actualizado"}
+        
+    except Exception as e:
+        raise HTTPException(status_code=400, detail=str(e))
 
 # ==================== CAMERA ENDPOINTS ====================
 
@@ -708,7 +801,7 @@ async def websocket_endpoint(websocket: WebSocket):
 
 @app.websocket("/ws/camera/{camera_id}")
 async def camera_stream_websocket(websocket: WebSocket, camera_id: str):
-    """WebSocket endpoint para streaming de cámara"""
+    """WebSocket endpoint para streaming de cámara con detecciones YOLO y Modo Eco"""
     await websocket.accept()
     
     if not camera_manager or camera_id not in camera_manager.cameras:
@@ -721,21 +814,191 @@ async def camera_stream_websocket(websocket: WebSocket, camera_id: str):
     camera = camera_manager.cameras[camera_id]
     logger.info(f"Cliente conectado al stream de {camera_id}")
     
+    # Configuración de detección base
+    enable_detection = True
+    last_detection_time = 0
+    
     try:
         while True:
             # Obtener frame de la cámara
             frame = camera.get_frame()
             
             if frame is not None:
-                # Comprimir frame a JPEG
-                encode_param = [cv2.IMWRITE_JPEG_QUALITY, 70]  # Calidad 70%
+                # Procesar frame con Modo Eco
+                eco_config = None
+                if eco_manager:
+                    try:
+                        # Obtener configuración actual del Modo Eco
+                        eco_config = eco_manager.get_current_config()
+                        detection_interval = eco_manager.get_detection_interval()
+                        frame_delay = eco_manager.get_frame_delay()
+                        jpeg_quality = eco_config.get('jpeg_quality', 60)
+                        
+                        # Si estamos en IDLE, verificar movimiento en cada frame
+                        if eco_manager.current_state == SystemState.IDLE:
+                            # La detección de movimiento se hace internamente en detect_motion
+                            # y cambia el estado automáticamente si detecta algo
+                            eco_manager.detect_motion(frame)
+                        
+                        # Procesar frame según configuración del estado actual
+                        frame, _ = eco_manager.process_frame(frame)
+                        
+                    except Exception as e:
+                        logger.error(f"Error en Modo Eco: {e}")
+                        # Fallback a configuración por defecto
+                        detection_interval = 2.0
+                        frame_delay = 0.066  # ~15 FPS
+                        jpeg_quality = 60
+                else:
+                    # Fallback si no hay eco manager
+                    detection_interval = DETECTION_CONFIG.get('interval', 2.0)
+                    frame_delay = 1.0 / DETECTION_CONFIG.get('max_fps', 15)
+                    jpeg_quality = DETECTION_CONFIG.get('jpeg_quality', 60)
+                
+                current_time = asyncio.get_event_loop().time()
+                detections = []
+                
+                # Ejecutar detección YOLO según Modo Eco
+                should_detect = eco_manager and eco_manager.should_run_detection()
+                
+                if enable_detection and model and should_detect and (current_time - last_detection_time) > detection_interval:
+                    try:
+                        # Ejecutar predicción con umbral de confianza configurable
+                        confidence_threshold = getattr(alert_manager, 'config', {}).get('confidence_threshold', 0.75)
+                        results = model.predict(frame, conf=confidence_threshold, iou=0.5, verbose=False)
+                        
+                        # Procesar detecciones
+                        if len(results) > 0 and results[0].boxes is not None:
+                            for i, box in enumerate(results[0].boxes):
+                                # Asignar door_id basado en la zona de la cámara
+                                zone_id = camera.config.zone_id or f"cam_{camera_id}"
+                                door_id = f"{zone_id}_door_{i}"
+                                
+                                detection = {
+                                    'class_name': model.names[int(box.cls)],
+                                    'confidence': float(box.conf),
+                                    'bbox': {
+                                        'x1': int(box.xyxy[0][0]),
+                                        'y1': int(box.xyxy[0][1]),
+                                        'x2': int(box.xyxy[0][2]),
+                                        'y2': int(box.xyxy[0][3])
+                                    },
+                                    'door_id': door_id
+                                }
+                                detections.append(detection)
+                        
+                        # Procesar con DetectionManager para deduplicar
+                        if detection_manager and alert_manager:
+                            actions = detection_manager.process_frame_detections(detections, camera_id)
+                            
+                            # Ejecutar acciones necesarias
+                            for action in actions:
+                                if action['action'] == 'create_alert':
+                                    # Crear nueva alerta
+                                    await alert_manager.process_detection(
+                                        [action['detection']], 
+                                        camera_id=camera_id
+                                    )
+                                    logger.info(f"Alerta creada para {action['zone_id']}")
+                                elif action['action'] == 'cancel_alert':
+                                    # Cancelar alerta existente
+                                    zone_id = action['zone_id']
+                                    # Buscar TODOS los timers activos
+                                    active_timers = alert_manager.get_active_timers()
+                                    timers_to_cancel = []
+                                    
+                                    # Buscar timers que coincidan con la zona/cámara
+                                    for timer in active_timers:
+                                        timer_door_id = timer.get('door_id', '')
+                                        timer_camera_id = timer.get('camera_id', '')
+                                        
+                                        # Cancelar si:
+                                        # 1. El door_id coincide exactamente
+                                        # 2. Es de la misma cámara
+                                        # 3. El door_id contiene el zone_id
+                                        if (timer_door_id == zone_id or 
+                                            timer_camera_id == camera_id or
+                                            zone_id in timer_door_id or
+                                            timer_door_id in zone_id):
+                                            timers_to_cancel.append(timer_door_id)
+                                    
+                                    # Cancelar todos los timers encontrados
+                                    for door_id in timers_to_cancel:
+                                        alert_manager.acknowledge_alarm(door_id)
+                                        logger.info(f"Alerta cancelada para {door_id}")
+                                    
+                                    # Si no se encontraron timers específicos, limpiar todos de esta cámara
+                                    if not timers_to_cancel:
+                                        logger.warning(f"No se encontraron timers para {zone_id}, limpiando todos de cámara {camera_id}")
+                                        for timer in active_timers:
+                                            if timer.get('camera_id') == camera_id:
+                                                alert_manager.acknowledge_alarm(timer['door_id'])
+                                                logger.info(f"Alerta cancelada para {timer['door_id']} (limpieza por cámara)")
+                        
+                        # Actualizar estado del Modo Eco
+                        if eco_manager:
+                            door_open_detected = any(d['class_name'] == 'gate_open' for d in detections)
+                            eco_manager.update_state(detection_found=door_open_detected)
+                        
+                        last_detection_time = current_time
+                        
+                    except Exception as e:
+                        logger.error(f"Error en detección YOLO: {e}")
+                
+                # Dibujar detecciones en el frame
+                if detections:
+                    for det in detections:
+                        bbox = det['bbox']
+                        color = (0, 255, 0) if det['class_name'] == 'gate_closed' else (0, 0, 255)
+                        
+                        # Dibujar bounding box
+                        cv2.rectangle(frame, 
+                                    (bbox['x1'], bbox['y1']), 
+                                    (bbox['x2'], bbox['y2']), 
+                                    color, 2)
+                        
+                        # Dibujar etiqueta
+                        label = f"{det['class_name']} {det['confidence']:.2f}"
+                        label_size, _ = cv2.getTextSize(label, cv2.FONT_HERSHEY_SIMPLEX, 0.5, 2)
+                        
+                        # Fondo para el texto
+                        cv2.rectangle(frame,
+                                    (bbox['x1'], bbox['y1'] - label_size[1] - 4),
+                                    (bbox['x1'] + label_size[0], bbox['y1']),
+                                    color, -1)
+                        
+                        # Texto
+                        cv2.putText(frame, label,
+                                  (bbox['x1'], bbox['y1'] - 2),
+                                  cv2.FONT_HERSHEY_SIMPLEX, 0.5, (255, 255, 255), 2)
+                
+                # Comprimir frame a JPEG con calidad según Modo Eco
+                encode_param = [cv2.IMWRITE_JPEG_QUALITY, int(jpeg_quality)]
                 _, buffer = cv2.imencode('.jpg', frame, encode_param)
                 
-                # Enviar como bytes
-                await websocket.send_bytes(buffer.tobytes())
+                # Crear mensaje con metadata
+                metadata = {
+                    "type": "frame",
+                    "timestamp": datetime.now().isoformat(),
+                    "detections": detections,
+                    "frame_size": len(buffer),
+                    "zones": detection_manager.get_zone_states() if detection_manager else {},
+                    "eco_mode": eco_manager.get_status() if eco_manager else None
+                }
                 
-                # Control de FPS - enviar máximo 30 fps
-                await asyncio.sleep(0.033)  # ~30 FPS
+                # Protocolo: enviar metadata + frame en un solo mensaje binario
+                # Formato: [metadata_length(4 bytes)][metadata_json][frame_jpeg]
+                metadata_json = json.dumps(metadata).encode('utf-8')
+                metadata_length = len(metadata_json).to_bytes(4, byteorder='big')
+                
+                # Combinar todo en un solo mensaje
+                full_message = metadata_length + metadata_json + buffer.tobytes()
+                
+                # Enviar mensaje completo
+                await websocket.send_bytes(full_message)
+                
+                # Control de FPS según Modo Eco
+                await asyncio.sleep(frame_delay)
             else:
                 # Si no hay frame, esperar un poco
                 await asyncio.sleep(0.1)
