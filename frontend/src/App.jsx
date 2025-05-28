@@ -3,7 +3,8 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { 
   AlertCircle, CheckCircle, Clock, Camera, Settings, Activity,
   Shield, Eye, Gauge, Bell, ChevronDown, Info, Play, Pause,
-  RefreshCw, Download, Upload, Zap, TrendingUp, Lock, Unlock
+  RefreshCw, Download, Upload, Zap, TrendingUp, Lock, Unlock,
+  Video, EyeOff
 } from 'lucide-react';
 import toast, { Toaster } from 'react-hot-toast';
 import axios from 'axios';
@@ -19,6 +20,9 @@ import {
   Legend,
   ArcElement,
 } from 'chart.js';
+import VideoContext from './components/VideoContext';
+import CameraConfig from './components/CameraConfig';
+import TimerConfig from './components/TimerConfig';
 
 ChartJS.register(
   CategoryScale,
@@ -31,12 +35,13 @@ ChartJS.register(
   ArcElement
 );
 
-const API_URL = 'http://localhost:8888';
-const WS_URL = 'ws://localhost:8888/ws';
+const API_URL = 'http://localhost:8889';
+const WS_URL = 'ws://localhost:8889/ws';
 
 function App() {
   // Estados principales
   const [activeTab, setActiveTab] = useState('dashboard');
+  const [configTab, setConfigTab] = useState('cameras');
   const [timers, setTimers] = useState([]);
   const [alarmActive, setAlarmActive] = useState(false);
   const [detections, setDetections] = useState([]);
@@ -50,6 +55,11 @@ function App() {
   const [confidenceThreshold, setConfidenceThreshold] = useState(0.65);
   const [analysisMode, setAnalysisMode] = useState('balanced');
   const [isMonitoring, setIsMonitoring] = useState(true);
+  
+  // Estados para video
+  const [selectedTimer, setSelectedTimer] = useState(null);
+  const [showDirectView, setShowDirectView] = useState(false);
+  const [cameras, setCameras] = useState({});
   
   // Referencias
   const wsRef = useRef(null);
@@ -141,6 +151,7 @@ function App() {
   useEffect(() => {
     loadConfig();
     loadStats();
+    loadCameras();
   }, []);
 
   const loadConfig = async () => {
@@ -158,6 +169,15 @@ function App() {
       setStats(response.data.statistics);
     } catch (error) {
       console.error('Error cargando stats:', error);
+    }
+  };
+
+  const loadCameras = async () => {
+    try {
+      const response = await axios.get(`${API_URL}/api/cameras`);
+      setCameras(response.data.cameras);
+    } catch (error) {
+      console.error('Error cargando cámaras:', error);
     }
   };
 
@@ -513,6 +533,18 @@ function App() {
               </h2>
               <div className="flex gap-3">
                 <button
+                  onClick={() => setShowDirectView(!showDirectView)}
+                  className={`flex items-center gap-2 px-4 py-2 rounded-lg transition-all ${
+                    showDirectView 
+                      ? 'bg-blue-600 text-white' 
+                      : 'bg-gray-700 text-gray-300 hover:bg-gray-600'
+                  }`}
+                >
+                  {showDirectView ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                  {showDirectView ? 'Ocultar Vista Directa' : 'Vista Directa'}
+                </button>
+                
+                <button
                   onClick={() => setIsMonitoring(!isMonitoring)}
                   className={`flex items-center gap-2 px-4 py-2 rounded-lg transition-all ${
                     isMonitoring 
@@ -612,21 +644,33 @@ function App() {
                       </div>
                       
                       {/* Acciones */}
-                      {timer.alarm_triggered && (
-                        <button
-                          onClick={() => acknowledgeAlarm(timer.door_id)}
-                          className="w-full bg-blue-600 hover:bg-blue-700 py-2 rounded-lg transition-colors flex items-center justify-center gap-2"
-                        >
-                          <CheckCircle className="w-4 h-4" />
-                          Reconocer
-                        </button>
-                      )}
+                      <div className="space-y-2">
+                        {timer.has_camera && (
+                          <button
+                            onClick={() => setSelectedTimer(timer)}
+                            className="w-full bg-gray-700 hover:bg-gray-600 py-2 rounded-lg transition-colors flex items-center justify-center gap-2"
+                          >
+                            <Video className="w-4 h-4" />
+                            Ver Video Contextual
+                          </button>
+                        )}
+                        
+                        {timer.alarm_triggered && (
+                          <button
+                            onClick={() => acknowledgeAlarm(timer.door_id)}
+                            className="w-full bg-blue-600 hover:bg-blue-700 py-2 rounded-lg transition-colors flex items-center justify-center gap-2"
+                          >
+                            <CheckCircle className="w-4 h-4" />
+                            Reconocer
+                          </button>
+                        )}
+                      </div>
                     </div>
                   </motion.div>
                 ))}
               </AnimatePresence>
               
-              {timers.length === 0 && (
+              {timers.length === 0 && !showDirectView && (
                 <div className="col-span-full text-center py-16">
                   <div className="inline-flex items-center justify-center w-16 h-16 bg-green-500/20 rounded-full mb-4">
                     <CheckCircle className="w-8 h-8 text-green-400" />
@@ -636,6 +680,102 @@ function App() {
                 </div>
               )}
             </div>
+
+            {/* Video Context Modal para timer seleccionado */}
+            {selectedTimer && (
+              <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+                <div className="max-w-4xl w-full">
+                  <VideoContext 
+                    timer={selectedTimer} 
+                    onClose={() => setSelectedTimer(null)} 
+                  />
+                </div>
+              </div>
+            )}
+
+            {/* Vista Directa - Grid de Cámaras */}
+            {showDirectView && (
+              <motion.div
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                className="mt-6"
+              >
+                <div className="bg-gray-800/50 backdrop-blur rounded-xl p-6 border border-gray-700/50">
+                  <h3 className="text-lg font-semibold mb-4 flex items-center gap-2">
+                    <Video className="w-5 h-5 text-blue-400" />
+                    Vista Directa - Todas las Cámaras
+                  </h3>
+                  
+                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                    {Object.entries(cameras).map(([camId, camera]) => (
+                      <div 
+                        key={camId}
+                        className="bg-gray-900 rounded-lg overflow-hidden border border-gray-700 hover:border-blue-500/50 transition-all cursor-pointer"
+                        onClick={() => {
+                          // TODO: Abrir cámara en fullscreen
+                          toast.info(`Cámara ${camera.name} - Fullscreen no implementado aún`);
+                        }}
+                      >
+                        <div className="p-3 bg-gray-800 border-b border-gray-700">
+                          <div className="flex items-center justify-between">
+                            <span className="font-medium text-sm">{camera.name}</span>
+                            <div className="flex items-center gap-2">
+                              {camera.connected ? (
+                                <div className="flex items-center gap-1">
+                                  <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse" />
+                                  <span className="text-xs text-green-400">EN VIVO</span>
+                                </div>
+                              ) : (
+                                <div className="flex items-center gap-1">
+                                  <div className="w-2 h-2 bg-red-500 rounded-full" />
+                                  <span className="text-xs text-red-400">OFFLINE</span>
+                                </div>
+                              )}
+                            </div>
+                          </div>
+                        </div>
+                        
+                        <div className="relative aspect-video bg-black">
+                          {camera.connected ? (
+                            <div className="absolute inset-0 flex items-center justify-center">
+                              <div className="text-center">
+                                <Camera className="w-12 h-12 text-gray-600 mb-2" />
+                                <p className="text-sm text-gray-500">Stream no implementado</p>
+                                <p className="text-xs text-gray-600 mt-1">FPS: {camera.fps || 0}</p>
+                              </div>
+                            </div>
+                          ) : (
+                            <div className="absolute inset-0 flex items-center justify-center">
+                              <div className="text-center">
+                                <AlertCircle className="w-8 h-8 text-red-500 mb-2" />
+                                <p className="text-sm text-red-400">Sin conexión</p>
+                              </div>
+                            </div>
+                          )}
+                        </div>
+                        
+                        <div className="p-3 bg-gray-800 border-t border-gray-700">
+                          <div className="flex items-center justify-between text-xs text-gray-400">
+                            <span>ID: {camId}</span>
+                            <span>Errores: {camera.errors || 0}</span>
+                          </div>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                  
+                  {Object.keys(cameras).length === 0 && (
+                    <div className="text-center py-8">
+                      <Camera className="w-16 h-16 text-gray-600 mx-auto mb-4" />
+                      <p className="text-gray-400">No hay cámaras configuradas</p>
+                      <p className="text-sm text-gray-500 mt-2">
+                        Configure cámaras en el archivo camera_config.json
+                      </p>
+                    </div>
+                  )}
+                </div>
+              </motion.div>
+            )}
           </div>
         )}
 
@@ -978,51 +1118,67 @@ function App() {
 
         {/* Config Tab */}
         {activeTab === 'config' && (
-          <div className="max-w-4xl mx-auto space-y-6">
-            <h2 className="text-2xl font-bold flex items-center gap-2">
-              <Settings className="w-6 h-6 text-blue-400" />
-              Configuración del Sistema
-            </h2>
-
-            {/* Configuración de Temporizadores */}
-            <div className="bg-gray-800/50 backdrop-blur rounded-xl p-6 border border-gray-700/50">
-              <h3 className="text-lg font-semibold mb-4">Temporizadores por Zona</h3>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                {Object.entries(config.timer_delays || {}).map(([zone, delay]) => (
-                  <div key={zone} className="flex items-center justify-between p-4 bg-gray-700/30 rounded-lg">
-                    <div>
-                      <span className="font-medium">{zone}</span>
-                      <p className="text-sm text-gray-400">Zona/Cámara</p>
-                    </div>
-                    <div className="text-right">
-                      <span className="text-2xl font-bold text-blue-400">{delay}s</span>
-                      <p className="text-sm text-gray-400">Delay</p>
-                    </div>
-                  </div>
-                ))}
-              </div>
+          <div className="max-w-6xl mx-auto space-y-6">
+            {/* Tabs de configuración */}
+            <div className="flex gap-4 border-b border-gray-700">
+              <button
+                onClick={() => setConfigTab('cameras')}
+                className={`pb-3 px-1 transition-all ${
+                  configTab === 'cameras'
+                    ? 'text-blue-400 border-b-2 border-blue-400'
+                    : 'text-gray-400 hover:text-gray-300'
+                }`}
+              >
+                Cámaras
+              </button>
+              <button
+                onClick={() => setConfigTab('timers')}
+                className={`pb-3 px-1 transition-all ${
+                  configTab === 'timers'
+                    ? 'text-blue-400 border-b-2 border-blue-400'
+                    : 'text-gray-400 hover:text-gray-300'
+                }`}
+              >
+                Temporizadores
+              </button>
+              <button
+                onClick={() => setConfigTab('notifications')}
+                className={`pb-3 px-1 transition-all ${
+                  configTab === 'notifications'
+                    ? 'text-blue-400 border-b-2 border-blue-400'
+                    : 'text-gray-400 hover:text-gray-300'
+                }`}
+              >
+                Notificaciones
+              </button>
             </div>
 
-            {/* Configuración de Notificaciones */}
-            <div className="bg-gray-800/50 backdrop-blur rounded-xl p-6 border border-gray-700/50">
-              <h3 className="text-lg font-semibold mb-4">Notificaciones</h3>
-              <div className="space-y-4">
-                {[
-                  { name: 'Alertas Sonoras', enabled: true },
-                  { name: 'Notificaciones Push', enabled: false },
-                  { name: 'Email', enabled: false },
-                  { name: 'Telegram', enabled: true },
-                ].map((item) => (
-                  <div key={item.name} className="flex items-center justify-between p-3 bg-gray-700/30 rounded-lg">
-                    <span className="font-medium">{item.name}</span>
-                    <label className="relative inline-flex items-center cursor-pointer">
-                      <input type="checkbox" defaultChecked={item.enabled} className="sr-only peer" />
-                      <div className="w-11 h-6 bg-gray-600 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-600"></div>
-                    </label>
-                  </div>
-                ))}
+            {/* Contenido de las tabs */}
+            {configTab === 'cameras' && <CameraConfig />}
+            
+            {configTab === 'timers' && <TimerConfig />}
+            
+            {configTab === 'notifications' && (
+              <div className="bg-gray-800/50 backdrop-blur rounded-xl p-6 border border-gray-700/50">
+                <h3 className="text-lg font-semibold mb-4">Notificaciones</h3>
+                <div className="space-y-4">
+                  {[
+                    { name: 'Alertas Sonoras', enabled: true },
+                    { name: 'Notificaciones Push', enabled: false },
+                    { name: 'Email', enabled: false },
+                    { name: 'Telegram', enabled: true },
+                  ].map((item) => (
+                    <div key={item.name} className="flex items-center justify-between p-3 bg-gray-700/30 rounded-lg">
+                      <span className="font-medium">{item.name}</span>
+                      <label className="relative inline-flex items-center cursor-pointer">
+                        <input type="checkbox" defaultChecked={item.enabled} className="sr-only peer" />
+                        <div className="w-11 h-6 bg-gray-600 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-600"></div>
+                      </label>
+                    </div>
+                  ))}
+                </div>
               </div>
-            </div>
+            )}
           </div>
         )}
       </main>
