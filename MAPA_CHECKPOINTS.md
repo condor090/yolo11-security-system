@@ -91,6 +91,18 @@
   - Buffer circular 2 minutos
   - Sistema completo funcionando
 
+### v3.1.0-live-streaming ✅ (ACTUAL)
+- **Fecha:** 27 Mayo 19:10
+- **Commit:** 1067bcd
+- **Estado:** Streaming en tiempo real
+- **Características:**
+  - WebSocket streaming funcionando
+  - MJPEG fallback automático
+  - Controles interactivos (zoom, snapshot)
+  - Vista multi-cámara
+  - FPS counter y métricas
+  - Canvas rendering optimizado
+
 ## 📊 Evolución del Proyecto
 
 ```
@@ -104,7 +116,9 @@ v1.0.0 → v1.0.0-gates-trained → v1.1.0-dashboard → v1.2.0-docker
                                           ↓
                                    v3.0.0-modern-arch
                                           ↓
-                                   v3.0.0-camera-rtsp ← ESTÁS AQUÍ
+                                   v3.0.0-camera-rtsp
+                                          ↓
+                                   v3.1.0-live-streaming ← ESTÁS AQUÍ
 ```
 
 ## 🔄 Comandos para Restaurar Cualquier Checkpoint
