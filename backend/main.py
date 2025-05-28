@@ -6,7 +6,7 @@ Arquitectura profesional con WebSockets y tiempo real
 
 from fastapi import FastAPI, WebSocket, WebSocketDisconnect, UploadFile, File, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import FileResponse
+from fastapi.responses import FileResponse, StreamingResponse
 from contextlib import asynccontextmanager
 import asyncio
 import json
@@ -634,6 +634,35 @@ async def stop_recording(camera_id: str):
     
     return {"success": True}
 
+@app.get("/api/cameras/{camera_id}/stream.mjpeg")
+async def get_camera_mjpeg_stream(camera_id: str):
+    """Stream MJPEG de una cámara (fallback para WebSocket)"""
+    if not camera_manager or camera_id not in camera_manager.cameras:
+        raise HTTPException(status_code=404, detail="Cámara no encontrada")
+    
+    camera = camera_manager.cameras[camera_id]
+    
+    async def generate():
+        """Generador de frames MJPEG"""
+        while True:
+            frame = camera.get_frame()
+            if frame is not None:
+                # Codificar frame como JPEG
+                _, buffer = cv2.imencode('.jpg', frame, [cv2.IMWRITE_JPEG_QUALITY, 70])
+                
+                # Formato MJPEG
+                yield (b'--frame\r\n'
+                       b'Content-Type: image/jpeg\r\n\r\n' + 
+                       buffer.tobytes() + 
+                       b'\r\n')
+            
+            await asyncio.sleep(0.033)  # ~30 FPS
+    
+    return StreamingResponse(
+        generate(),
+        media_type="multipart/x-mixed-replace; boundary=frame"
+    )
+
 # ==================== WEBSOCKET ====================
 
 @app.websocket("/ws")
@@ -676,6 +705,49 @@ async def websocket_endpoint(websocket: WebSocket):
     except Exception as e:
         logger.error(f"Error en WebSocket: {e}")
         manager.disconnect(websocket)
+
+@app.websocket("/ws/camera/{camera_id}")
+async def camera_stream_websocket(websocket: WebSocket, camera_id: str):
+    """WebSocket endpoint para streaming de cámara"""
+    await websocket.accept()
+    
+    if not camera_manager or camera_id not in camera_manager.cameras:
+        await websocket.send_json({
+            "error": "Cámara no encontrada"
+        })
+        await websocket.close()
+        return
+    
+    camera = camera_manager.cameras[camera_id]
+    logger.info(f"Cliente conectado al stream de {camera_id}")
+    
+    try:
+        while True:
+            # Obtener frame de la cámara
+            frame = camera.get_frame()
+            
+            if frame is not None:
+                # Comprimir frame a JPEG
+                encode_param = [cv2.IMWRITE_JPEG_QUALITY, 70]  # Calidad 70%
+                _, buffer = cv2.imencode('.jpg', frame, encode_param)
+                
+                # Enviar como bytes
+                await websocket.send_bytes(buffer.tobytes())
+                
+                # Control de FPS - enviar máximo 30 fps
+                await asyncio.sleep(0.033)  # ~30 FPS
+            else:
+                # Si no hay frame, esperar un poco
+                await asyncio.sleep(0.1)
+                
+    except WebSocketDisconnect:
+        logger.info(f"Cliente desconectado del stream de {camera_id}")
+    except Exception as e:
+        logger.error(f"Error en stream de {camera_id}: {e}")
+        try:
+            await websocket.close()
+        except:
+            pass
 
 # ==================== TAREAS ASÍNCRONAS ====================
 

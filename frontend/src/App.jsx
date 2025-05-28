@@ -23,6 +23,7 @@ import {
 import VideoContext from './components/VideoContext';
 import CameraConfig from './components/CameraConfig';
 import TimerConfig from './components/TimerConfig';
+import VideoStream from './components/VideoStream';
 
 ChartJS.register(
   CategoryScale,
@@ -710,12 +711,9 @@ function App() {
                     {Object.entries(cameras).map(([camId, camera]) => (
                       <div 
                         key={camId}
-                        className="bg-gray-900 rounded-lg overflow-hidden border border-gray-700 hover:border-blue-500/50 transition-all cursor-pointer"
-                        onClick={() => {
-                          // TODO: Abrir cámara en fullscreen
-                          toast.info(`Cámara ${camera.name} - Fullscreen no implementado aún`);
-                        }}
+                        className="bg-gray-900 rounded-lg overflow-hidden border border-gray-700 hover:border-blue-500/50 transition-all"
                       >
+                        {/* Header de la cámara */}
                         <div className="p-3 bg-gray-800 border-b border-gray-700">
                           <div className="flex items-center justify-between">
                             <span className="font-medium text-sm">{camera.name}</span>
@@ -735,15 +733,15 @@ function App() {
                           </div>
                         </div>
                         
+                        {/* Stream de video */}
                         <div className="relative aspect-video bg-black">
                           {camera.connected ? (
-                            <div className="absolute inset-0 flex items-center justify-center">
-                              <div className="text-center">
-                                <Camera className="w-12 h-12 text-gray-600 mb-2" />
-                                <p className="text-sm text-gray-500">Stream no implementado</p>
-                                <p className="text-xs text-gray-600 mt-1">FPS: {camera.fps || 0}</p>
-                              </div>
-                            </div>
+                            <VideoStream 
+                              cameraId={camId}
+                              cameraName={camera.name}
+                              showControls={true}
+                              className="w-full h-full"
+                            />
                           ) : (
                             <div className="absolute inset-0 flex items-center justify-center">
                               <div className="text-center">
@@ -754,6 +752,7 @@ function App() {
                           )}
                         </div>
                         
+                        {/* Footer con información */}
                         <div className="p-3 bg-gray-800 border-t border-gray-700">
                           <div className="flex items-center justify-between text-xs text-gray-400">
                             <span>ID: {camId}</span>

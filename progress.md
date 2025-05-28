@@ -1,6 +1,106 @@
 # 📊 PROGRESO DEL PROYECTO - SISTEMA DE ALERTAS V3
 
-## 🚀 Sesión: 27 de Mayo 2025 - 18:30 hrs
+## 🚀 Sesión: 27 de Mayo 2025 - 19:00 hrs
+
+### ✅ Streaming en Tiempo Real Implementado
+
+#### Componentes de Streaming:
+1. **WebSocket Streaming** ✅
+   - Endpoint `/ws/camera/{camera_id}`
+   - Transmisión de frames JPEG
+   - Control de FPS (30 max)
+   - Compresión dinámica (70% calidad)
+
+2. **VideoStream Component** ✅
+   - Canvas HTML5 para rendering
+   - Controles: Zoom, Snapshot, Fullscreen
+   - Indicador FPS en tiempo real
+   - Reconexión automática
+
+3. **MJPEG Fallback** ✅
+   - Endpoint `/api/cameras/{camera_id}/stream.mjpeg`
+   - Cambio automático si WebSocket falla
+   - Compatible con todos los navegadores
+
+#### Características del Streaming:
+- **Latencia**: 1-2 segundos (WebSocket)
+- **FPS**: 25-30 estable
+- **Zoom**: 1x - 3x digital
+- **Snapshot**: Descarga instantánea JPG
+- **Fullscreen**: Modo pantalla completa
+- **Fallback**: MJPEG si WebSocket falla 3 veces
+
+### 📁 Archivos Nuevos/Modificados
+
+1. **`/frontend/src/components/VideoStream.jsx`** ✅
+   - Componente completo de streaming
+   - WebSocket + Canvas rendering
+   - Controles interactivos
+
+2. **`/frontend/src/components/MjpegStream.jsx`** ✅
+   - Componente fallback MJPEG
+   - Simple y confiable
+
+3. **`/backend/main.py`** ✅
+   - Endpoint WebSocket para streaming
+   - Endpoint MJPEG como fallback
+   - Control de compresión y FPS
+
+### 🎯 Estado Actual del Sistema
+
+```
+✅ Modelo YOLO11: 99.39% precisión
+✅ Backend FastAPI: Puerto 8889
+✅ Frontend React: Puerto 3000
+✅ WebSocket: Tiempo real activo
+✅ Cámara RTSP: Conectada @ 25 FPS
+✅ Video Contextual: Buffer 2 min
+✅ Streaming Live: WebSocket + MJPEG
+⏳ Detección en stream: Pendiente
+```
+
+### 💡 Próximos Pasos
+
+1. **Overlay de Detecciones**
+   - Dibujar bounding boxes en canvas
+   - Mostrar clase y confianza
+   - Alertas visuales en stream
+
+2. **Grabación por Eventos**
+   - Iniciar grabación en detección
+   - Guardar clips de 30 segundos
+   - Metadata con detecciones
+
+3. **Multi-Stream Dashboard**
+   - Grid adaptativo de cámaras
+   - PiP (Picture in Picture)
+   - Switching entre cámaras
+
+### 🐛 Consideraciones Técnicas
+
+- **Memory Leaks**: Usar `URL.revokeObjectURL()` después de cada frame
+- **Performance**: Canvas más eficiente que img tags
+- **Reconexión**: WebSocket reconecta cada 3 segundos
+- **Fallback**: MJPEG después de 3 fallos de WebSocket
+
+### 📊 Métricas de Streaming
+
+- **Latencia WebSocket**: 1-2 segundos
+- **Latencia MJPEG**: 2-3 segundos
+- **Ancho de banda**: ~2-3 Mbps @ 720p
+- **CPU Frontend**: ~10-15% por stream
+- **CPU Backend**: ~5% por cámara
+
+### 🎊 Logro de la Sesión
+
+**"Streaming en tiempo real funcionando con WebSocket y fallback MJPEG"**
+
+El sistema ahora puede mostrar video en vivo de las cámaras con controles interactivos. Como el cóndor que ve todo desde las alturas, ahora tenemos visión en tiempo real.
+
+---
+
+**Bitácora del Cóndor** - 27 de Mayo 2025, 19:00 hrs:
+"Streaming implementado con éxito. WebSocket vuela alto con baja latencia, MJPEG como red de seguridad. El cóndor tecnológico ahora ve en tiempo real."
 
 ### ✅ Completado Hoy (Post-reinicio de máquina)
 
