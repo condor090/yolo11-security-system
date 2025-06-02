@@ -1,0 +1,26 @@
+{
+  "cam_001": {
+    "id": "cam_001",
+    "name": "camara_test",
+    "ip": "192.168.1.11",
+    "username": "admin",
+    "password": "Mayocabo1",
+    "rtsp_port": 554,
+    "channel": 1,
+    "stream": "main",
+    "zone_id": "entrance",
+    "enabled": true
+  },
+  "cam_sim": {
+    "id": "cam_sim",
+    "name": "Cámara Simulada",
+    "ip": "0",
+    "username": "none",
+    "password": "none",
+    "rtsp_port": 0,
+    "channel": 0,
+    "stream": "webcam",
+    "zone_id": "entrance_door_0",
+    "enabled": false
+  }
+}

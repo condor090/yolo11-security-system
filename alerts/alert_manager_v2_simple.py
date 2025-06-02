@@ -1,0 +1,508 @@
+#!/usr/bin/env python3
+"""
+Alert Manager V2 Simplificado - Sistema de alertas con temporizador
+Versión estable sin dependencias problemáticas
+FILOSOFÍA: Puerta cerrada = Sistema seguro (limpia TODOS los timers)
+"""
+
+import json
+import logging
+from datetime import datetime, timedelta
+from typing import Dict, List, Optional, Any
+from dataclasses import dataclass
+from enum import Enum
+from pathlib import Path
+import threading
+import time
+import asyncio
+
+# Configurar logging
+logging.basicConfig(
+    level=logging.INFO,
+    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s'
+)
+logger = logging.getLogger(__name__)
+
+# Importar servicio de audio
+try:
+    from backend.utils.simple_audio_service import simple_audio_service as audio_service
+    AUDIO_AVAILABLE = True
+    logger.info("🔊 Servicio de audio simple disponible")
+except ImportError:
+    AUDIO_AVAILABLE = False
+    audio_service = None
+    logger.warning("⚠️ Servicio de audio no disponible")
+
+# Importar gestor de alertas Telegram
+try:
+    from backend.utils.telegram_alert_manager import TelegramAlertManager
+    from backend.utils.telegram_service import telegram_service
+    TELEGRAM_AVAILABLE = True
+    logger.info("📱 Servicio de alertas Telegram disponible")
+except ImportError:
+    TELEGRAM_AVAILABLE = False
+    TelegramAlertManager = None
+    telegram_service = None
+    logger.warning("⚠️ Servicio de alertas Telegram no disponible")
+
+
+class AlertSeverity(Enum):
+    """Niveles de severidad de alertas"""
+    LOW = "low"
+    MEDIUM = "medium"
+    HIGH = "high"
+    CRITICAL = "critical"
+
+
+class AlertStatus(Enum):
+    """Estados de una alerta"""
+    PENDING = "pending"
+    COUNTDOWN = "countdown"
+    TRIGGERED = "triggered"
+    SENT = "sent"
+    FAILED = "failed"
+    ACKNOWLEDGED = "acknowledged"
+    CANCELLED = "cancelled"
+
+
+@dataclass
+class DoorTimer:
+    """Temporizador para una puerta específica"""
+    door_id: str
+    first_detected: datetime
+    last_detected: datetime
+    delay_seconds: int
+    is_active: bool = True
+    alarm_triggered: bool = False
+    camera_id: str = "default"
+    
+    @property
+    def time_elapsed(self) -> float:
+        """Tiempo transcurrido desde la primera detección"""
+        return (datetime.now() - self.first_detected).total_seconds()
+    
+    @property
+    def time_remaining(self) -> float:
+        """Tiempo restante antes de activar alarma"""
+        remaining = self.delay_seconds - self.time_elapsed
+        return max(0, remaining)
+    
+    @property
+    def should_trigger_alarm(self) -> bool:
+        """Verificar si debe activar la alarma"""
+        return self.is_active and self.time_elapsed >= self.delay_seconds and not self.alarm_triggered
+
+
+class AlertManager:
+    """Gestor principal de alertas con sistema de temporizador"""
+    
+    def __init__(self, config_path: Optional[str] = None):
+        """Inicializar el gestor de alertas"""
+        self.config_path = config_path
+        self.config = self._load_config(config_path)
+        self.door_timers: Dict[str, DoorTimer] = {}
+        self.alert_history = []
+        self.alarm_active = False
+        
+        # Inicializar gestor de alertas Telegram
+        self.telegram_alert_manager = None
+        if TELEGRAM_AVAILABLE and TelegramAlertManager and telegram_service:
+            self.telegram_alert_manager = TelegramAlertManager(telegram_service)
+            asyncio.create_task(self.telegram_alert_manager.start_monitoring())
+            logger.info("📱 Gestor de alertas Telegram iniciado")
+        
+        # Iniciar monitor de temporizadores
+        self._start_timer_monitor()
+        
+        logger.info("AlertManager V2 inicializado - Filosofía: Puerta cerrada = Sistema seguro")
+    
+    def _load_config(self, config_path: Optional[str]) -> Dict:
+        """Cargar configuración desde archivo o usar valores por defecto"""
+        default_config = {
+            "timer_delays": {
+                "default": 30,
+                "entrance": 15,
+                "loading": 300,
+                "emergency": 5,
+                "cam1": 30,
+                "cam2": 60,
+                "cam3": 120
+            },
+            "timer_units": "seconds",
+            "sound_enabled": True,
+            "visual_alerts": True,
+            "clean_all_on_close": True  # NUEVO: Limpiar todo cuando se cierra cualquier puerta
+        }
+        
+        if config_path and Path(config_path).exists():
+            try:
+                with open(config_path, 'r') as f:
+                    user_config = json.load(f)
+                    # Merge configs
+                    for key, value in user_config.items():
+                        if isinstance(value, dict) and key in default_config:
+                            default_config[key].update(value)
+                        else:
+                            default_config[key] = value
+            except Exception as e:
+                logger.error(f"Error cargando configuración: {e}")
+        
+        return default_config
+    
+    def _get_zone_name(self, door_id: str) -> str:
+        """Obtener nombre amigable de la zona"""
+        zone_names = {
+            "door_1": "Entrada Principal",
+            "door_2": "Área de Carga",
+            "door_3": "Salida de Emergencia",
+            "cam1_door_0": "Cámara 1",
+            "cam2_door_0": "Cámara 2",
+            "cam3_door_0": "Cámara 3"
+        }
+        return zone_names.get(door_id, door_id)
+    
+    def _start_timer_monitor(self):
+        """Iniciar thread monitor de temporizadores"""
+        monitor_thread = threading.Thread(target=self._monitor_timers, daemon=True)
+        monitor_thread.start()
+        logger.info("Monitor de temporizadores iniciado")
+    
+    def _monitor_timers(self):
+        """Thread que monitorea los temporizadores activos"""
+        while True:
+            try:
+                current_time = datetime.now()
+                
+                # Lista para timers a eliminar
+                timers_to_remove = []
+                
+                # Verificar cada temporizador
+                for door_id, timer in list(self.door_timers.items()):
+                    if not timer.is_active:
+                        continue
+                    
+                    # Verificar si debe activar alarma
+                    if timer.should_trigger_alarm:
+                        logger.warning(f"⏰ ALARMA ACTIVADA - Puerta {door_id} abierta por {timer.time_elapsed:.0f} segundos")
+                        timer.alarm_triggered = True
+                        self.alarm_active = True
+                        
+                        # Activar alarma sonora si está disponible
+                        if AUDIO_AVAILABLE and audio_service:
+                            try:
+                                zone_name = self._get_zone_name(door_id)
+                                # Llamada síncrona directa
+                                audio_service.start_alarm(
+                                    zone_id=door_id, 
+                                    zone_name=zone_name, 
+                                    timer_seconds=timer.delay_seconds
+                                )
+                                logger.info(f"🔊 Alarma sonora activada para {zone_name}")
+                            except Exception as e:
+                                logger.error(f"Error activando alarma sonora: {e}")
+                        
+                        # Activar alerta persistente de Telegram
+                        if self.telegram_alert_manager and telegram_service.enabled:
+                            try:
+                                zone_name = self._get_zone_name(door_id)
+                                
+                                # Intentar capturar imagen de la cámara si está disponible
+                                image = None
+                                try:
+                                    # Acceder al camera_manager global a través del módulo backend.main
+                                    import backend.main
+                                    if hasattr(backend.main, 'camera_manager') and backend.main.camera_manager:
+                                        camera_manager = backend.main.camera_manager
+                                        if timer.camera_id in camera_manager.cameras:
+                                            camera = camera_manager.cameras[timer.camera_id]
+                                            frame = camera.get_frame()
+                                            if frame is not None:
+                                                image = frame
+                                                logger.info(f"📸 Imagen capturada de cámara {timer.camera_id}")
+                                        else:
+                                            # Si no hay cámara específica, buscar por zona
+                                            camera = camera_manager.get_camera_by_zone(door_id)
+                                            if camera:
+                                                frame = camera.get_frame()
+                                                if frame is not None:
+                                                    image = frame
+                                                    logger.info(f"📸 Imagen capturada de zona {door_id}")
+                                except Exception as e:
+                                    logger.warning(f"No se pudo capturar imagen: {e}")
+                                
+                                # Usar call_soon_threadsafe para ejecutar en el loop principal
+                                loop = asyncio.new_event_loop()
+                                asyncio.set_event_loop(loop)
+                                loop.run_until_complete(
+                                    self.telegram_alert_manager.create_alert(
+                                        zone_id=door_id,
+                                        zone_name=zone_name,
+                                        camera_id=timer.camera_id,
+                                        image=image
+                                    )
+                                )
+                                loop.close()
+                                logger.info(f"📱 Alerta Telegram iniciada para {zone_name}")
+                            except Exception as e:
+                                logger.error(f"Error iniciando alerta Telegram: {e}")
+                    
+                    # Limpiar temporizadores muy antiguos (más de 10 minutos)
+                    if (current_time - timer.last_detected).total_seconds() > 600:
+                        logger.info(f"🧹 Limpiando temporizador antiguo: {door_id} (más de 10 minutos)")
+                        timers_to_remove.append(door_id)
+                
+                # Eliminar timers marcados
+                for door_id in timers_to_remove:
+                    if door_id in self.door_timers:
+                        del self.door_timers[door_id]
+                
+                # Actualizar estado global
+                self.alarm_active = any(t.alarm_triggered for t in self.door_timers.values())
+                
+                time.sleep(0.5)
+                
+            except Exception as e:
+                logger.error(f"Error en monitor: {e}")
+                time.sleep(1)
+    
+    def get_timer_delay(self, door_id: str, camera_id: str = "default") -> int:
+        """Obtener delay configurado para una puerta específica"""
+        delays = self.config['timer_delays']
+        
+        if camera_id in delays:
+            delay = delays[camera_id]
+        elif door_id in delays:
+            delay = delays[door_id]
+        else:
+            delay = delays.get('default', 30)
+        
+        if self.config.get('timer_units') == 'minutes':
+            delay = delay * 60
+        
+        return delay
+    
+    async def process_detection(self, detections: List[Dict], camera_id: str = "default", image: Optional[Any] = None):
+        """Procesar nuevas detecciones con sistema de temporizador"""
+        current_time = datetime.now()
+        
+        # Identificar puertas abiertas
+        open_doors = [d for d in detections if d.get('class_name') == 'gate_open']
+        
+        # Identificar puertas cerradas
+        closed_doors = [d for d in detections if d.get('class_name') == 'gate_closed']
+        
+        # FILOSOFÍA: Si detectamos CUALQUIER puerta cerrada, el sistema es seguro
+        if closed_doors and self.config.get('clean_all_on_close', True):
+            logger.info("🔒 PUERTA CERRADA DETECTADA - Sistema seguro, limpiando TODAS las alarmas")
+            
+            # Limpiar TODOS los timers de TODAS las cámaras
+            if self.door_timers:
+                logger.info(f"🧹 Limpiando {len(self.door_timers)} timers activos")
+                for timer_id in list(self.door_timers.keys()):
+                    timer = self.door_timers[timer_id]
+                    if timer.alarm_triggered:
+                        logger.info(f"🔕 Alarma CANCELADA para {timer_id}")
+                        # Detener alarma sonora
+                        if AUDIO_AVAILABLE and audio_service:
+                            try:
+                                audio_service.stop_alarm(timer_id)
+                            except:
+                                pass
+                        # Cancelar alerta Telegram
+                        if self.telegram_alert_manager:
+                            self.telegram_alert_manager.cancel_alert(timer_id)
+                    del self.door_timers[timer_id]
+            
+            # Resetear estado global
+            self.alarm_active = False
+            logger.info("✅ Sistema limpio - No hay alarmas activas")
+            
+        else:
+            # Procesar puertas cerradas individualmente (modo tradicional)
+            for door_detection in closed_doors:
+                door_id = door_detection.get('door_id', f"{camera_id}_door_0")
+                
+                # Buscar y cancelar timers relacionados
+                timers_to_remove = []
+                for timer_id, timer in self.door_timers.items():
+                    if (timer.camera_id == camera_id or 
+                        timer_id == door_id or
+                        door_id in timer_id or
+                        timer_id in door_id):
+                        timers_to_remove.append(timer_id)
+                
+                # Eliminar timers encontrados
+                for timer_id in timers_to_remove:
+                    timer = self.door_timers[timer_id]
+                    logger.info(f"✅ Puerta {timer_id} CERRADA - Cancelando timer")
+                    if timer.alarm_triggered:
+                        logger.info(f"🔕 Alarma cancelada para {timer_id}")
+                    del self.door_timers[timer_id]
+        
+        # Procesar puertas abiertas (solo si no se limpió todo)
+        for door_detection in open_doors:
+            door_id = door_detection.get('door_id', f"{camera_id}_door_0")
+            
+            if door_id in self.door_timers:
+                # Actualizar temporizador existente
+                timer = self.door_timers[door_id]
+                timer.last_detected = current_time
+                logger.debug(f"Puerta {door_id} sigue abierta. Tiempo: {timer.time_elapsed:.1f}s / {timer.delay_seconds}s")
+            else:
+                # Crear nuevo temporizador
+                delay = self.get_timer_delay(door_id, camera_id)
+                timer = DoorTimer(
+                    door_id=door_id,
+                    first_detected=current_time,
+                    last_detected=current_time,
+                    delay_seconds=delay,
+                    camera_id=camera_id
+                )
+                self.door_timers[door_id] = timer
+                logger.info(f"🔴 Nueva puerta abierta: {door_id}. Temporizador: {delay} segundos")
+        
+        # Limpiar timers huérfanos (sin detección reciente)
+        current_door_ids = {d.get('door_id') for d in detections}
+        timers_to_cleanup = []
+        
+        for door_id, timer in self.door_timers.items():
+            # Si es de esta cámara y no está en las detecciones actuales
+            if timer.camera_id == camera_id and door_id not in current_door_ids:
+                time_since_last = (current_time - timer.last_detected).total_seconds()
+                if time_since_last > 5:  # 5 segundos sin detección
+                    timers_to_cleanup.append(door_id)
+        
+        for door_id in timers_to_cleanup:
+            logger.info(f"🧹 Limpiando timer sin detección reciente: {door_id}")
+            del self.door_timers[door_id]
+        
+        # Actualizar estado global de alarma
+        self.alarm_active = any(t.alarm_triggered for t in self.door_timers.values())
+    
+    def get_timer_phase(self, elapsed_seconds: float) -> str:
+        """Determinar la fase actual basada en el tiempo transcurrido"""
+        # Usar la configuración por defecto por ahora
+        if elapsed_seconds < 30:
+            return "friendly"
+        elif elapsed_seconds < 120:
+            return "moderate"
+        else:
+            return "critical"
+    
+    def get_audio_phase_name(self, elapsed_seconds: float, total_seconds: float) -> str:
+        """Obtener nombre de fase de audio basado en porcentajes"""
+        if total_seconds <= 0:
+            return "friendly"
+            
+        percentage = (elapsed_seconds / total_seconds) * 100
+        
+        if percentage < 50:
+            return "friendly"
+        elif percentage < 90:
+            return "moderate"
+        else:
+            return "critical"
+    
+    def get_active_timers(self) -> List[Dict]:
+        """Obtener información de todos los temporizadores activos"""
+        active_timers = []
+        
+        # Obtener alertas de Telegram activas
+        telegram_alerts = {}
+        if self.telegram_alert_manager:
+            telegram_alerts = self.telegram_alert_manager.get_active_alerts()
+        
+        for door_id, timer in self.door_timers.items():
+            if timer.is_active:
+                elapsed = timer.time_elapsed
+                
+                # Usar lógica basada en porcentajes del timer total
+                phase = self.get_audio_phase_name(elapsed, timer.delay_seconds)
+                
+                # Verificar si hay alerta Telegram activa
+                telegram_info = telegram_alerts.get(door_id, {})
+                
+                active_timers.append({
+                    'door_id': door_id,
+                    'camera_id': timer.camera_id,
+                    'time_elapsed': elapsed,
+                    'time_remaining': timer.time_remaining,
+                    'delay_seconds': timer.delay_seconds,
+                    'alarm_triggered': timer.alarm_triggered,
+                    'first_detected': timer.first_detected.isoformat(),
+                    'progress_percent': min(100, (elapsed / timer.delay_seconds) * 100),
+                    'current_phase': phase,  # Fase basada en porcentaje del timer
+                    'telegram_active': bool(telegram_info),
+                    'telegram_send_count': telegram_info.get('send_count', 0),
+                    'telegram_next_in': telegram_info.get('next_interval', 0)
+                })
+        return active_timers
+    
+    def stop_all_alarms(self):
+        """Detener y ELIMINAR todas las alarmas activas"""
+        logger.info("🛑 STOP ALL - Eliminando TODOS los timers y alarmas")
+        
+        # Detener todas las alarmas sonoras
+        if AUDIO_AVAILABLE and audio_service:
+            try:
+                audio_service.stop_all_alarms()
+            except:
+                pass
+        
+        # Cancelar todas las alertas Telegram
+        if self.telegram_alert_manager:
+            self.telegram_alert_manager.cancel_all_alerts()
+        
+        # Limpiar todo
+        self.door_timers.clear()
+        self.alarm_active = False
+        
+        logger.info("✅ Sistema completamente limpio")
+    
+    def acknowledge_alarm(self, door_id: str):
+        """Reconocer y ELIMINAR una alarma específica"""
+        if door_id in self.door_timers:
+            logger.info(f"✅ Reconociendo y eliminando timer: {door_id}")
+            
+            # Detener alarma sonora si está activa
+            if AUDIO_AVAILABLE and audio_service:
+                try:
+                    audio_service.stop_alarm(door_id)
+                except:
+                    pass
+            
+            # Cancelar alerta Telegram
+            if self.telegram_alert_manager:
+                self.telegram_alert_manager.cancel_alert(door_id)
+            
+            del self.door_timers[door_id]
+            
+            # Actualizar estado global
+            self.alarm_active = any(t.alarm_triggered for t in self.door_timers.values())
+            
+            if not self.alarm_active:
+                logger.info("✅ No quedan alarmas activas")
+    
+    def get_alert_statistics(self, hours: int = 24) -> Dict:
+        """Obtener estadísticas básicas"""
+        telegram_stats = {}
+        if self.telegram_alert_manager:
+            telegram_stats = self.telegram_alert_manager.get_alert_statistics()
+        
+        return {
+            'total_alerts': len(self.alert_history),
+            'active_timers': len(self.get_active_timers()),
+            'alarm_active': self.alarm_active,
+            'average_confidence': 0.85,  # Placeholder
+            'telegram_stats': telegram_stats
+        }
+    
+    def save_config(self, config_path: Optional[str] = None):
+        """Guardar configuración actual"""
+        if not config_path:
+            config_path = self.config_path or "alerts/alert_config_v2.json"
+            
+        Path(config_path).parent.mkdir(parents=True, exist_ok=True)
+        with open(config_path, 'w') as f:
+            json.dump(self.config, f, indent=2)
+        logger.info(f"Configuración guardada en {config_path}")

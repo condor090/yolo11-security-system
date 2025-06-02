@@ -1,0 +1,58 @@
+{
+  "enabled": true,
+  "default_phases": {
+    "phase_1": {
+      "percentage": 50,
+      "interval_seconds": 2,
+      "sound": "ding_dong.mp3",
+      "volume": 0.5
+    },
+    "phase_2": {
+      "percentage": 90,
+      "interval_seconds": 1,
+      "sound": "beep_alert.mp3",
+      "volume": 0.7
+    },
+    "phase_3": {
+      "percentage": 100,
+      "interval_seconds": 0,
+      "sound": "alarm_siren.mp3",
+      "volume": 1.0
+    }
+  },
+  "zone_audio_configs": {
+    "default": {
+      "use_custom": false
+    },
+    "entrance_door_0": {
+      "use_custom": false,
+      "description": "Entrada principal con timer de 15 segundos"
+    },
+    "emergency": {
+      "use_custom": true,
+      "phases": [
+        {
+          "name": "urgent",
+          "duration_seconds": 2,
+          "interval_seconds": 1,
+          "sound": "ding_dong.mp3",
+          "volume": 0.8
+        },
+        {
+          "name": "critical",
+          "duration_seconds": 2,
+          "interval_seconds": 0.5,
+          "sound": "beep_alert.mp3",
+          "volume": 1.0
+        },
+        {
+          "name": "extreme",
+          "duration_seconds": -1,
+          "interval_seconds": 0,
+          "sound": "alarm_siren.mp3",
+          "volume": 1.0
+        }
+      ]
+    }
+  }
+}

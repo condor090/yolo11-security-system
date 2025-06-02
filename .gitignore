@@ -1,0 +1,83 @@
+# See https://help.github.com/articles/ignoring-files/ for more about ignoring files.
+
+# dependencies
+/node_modules
+/.pnp
+.pnp.js
+frontend/node_modules
+backend/__pycache__
+backend/*.pyc
+
+# testing
+/coverage
+
+# production
+/build
+/dist
+
+# misc
+.DS_Store
+.env.local
+.env.development.local
+.env.test.local
+.env.production.local
+
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+env/
+venv/
+.env
+
+# IDE
+.vscode/
+.idea/
+
+# Logs
+logs
+*.log
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Streamlit
+.streamlit/
+
+# Models (too large)
+*.pt
+!yolo11n.pt
+runs/
+
+# Session files
+*.session
+
+# Database
+*.db
+*.sqlite
+
+# Temporary
+*.tmp
+*.temp
+captured_events/
+-e 
+# Datasets de entrenamiento
+data/telegram_photos/
+data/train/
+data/val/
+data/test/
+data/classified/
+
+# Logs grandes
+*.log
+
+# Sesiones de Telegram
+*.session
+*.session-journal

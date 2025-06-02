@@ -1,0 +1,7 @@
+names:
+  0: gate_open
+  1: gate_closed
+nc: 2
+path: /Users/Shared/yolo11_project/data
+train: train/images
+val: val/images

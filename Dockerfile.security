@@ -1,0 +1,175 @@
+# YOLO11 Security System - Detección de Puertas con 99.39% mAP50
+# Dockerfile optimizado para proyecto de seguridad con computer vision
+
+FROM pytorch/pytorch:2.7.0-cuda12.6-cudnn9-runtime
+
+# Información del proyecto
+LABEL maintainer="condor090"
+LABEL description="YOLO11 based security system for gate detection (open/closed) with 99.39% accuracy"
+LABEL version="1.1.0"
+
+# Variables de entorno optimizadas
+ENV PYTHONUNBUFFERED=1 \
+    PYTHONDONTWRITEBYTECODE=1 \
+    PIP_NO_CACHE_DIR=1 \
+    PIP_BREAK_SYSTEM_PACKAGES=1 \
+    MKL_THREADING_LAYER=GNU \
+    OMP_NUM_THREADS=1 \
+    TF_CPP_MIN_LOG_LEVEL=3 \
+    DEBIAN_FRONTEND=noninteractive
+
+# Instalar dependencias del sistema
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    gcc g++ git zip unzip wget curl htop \
+    libgl1-mesa-glx libglib2.0-0 libpython3-dev \
+    libsm6 libxext6 libxrender-dev libgomp1 \
+    libgstreamer1.0-0 gstreamer1.0-plugins-base \
+    gstreamer1.0-plugins-good gstreamer1.0-plugins-bad \
+    gstreamer1.0-plugins-ugly gstreamer1.0-libav \
+    python3-opencv libopencv-dev \
+    gnupg software-properties-common \
+    ffmpeg libavcodec-extra \
+    && rm -rf /var/lib/apt/lists/*
+
+# Actualizaciones de seguridad
+RUN apt-get update && apt-get upgrade -y --no-install-recommends \
+    openssl tar curl wget \
+    && rm -rf /var/lib/apt/lists/*
+
+# Crear directorio de trabajo
+WORKDIR /security_project
+
+# Descargar fuentes necesarias para visualización
+ADD https://github.com/ultralytics/assets/releases/download/v0.0.0/Arial.ttf \
+    https://github.com/ultralytics/assets/releases/download/v0.0.0/Arial.Unicode.ttf \
+    /root/.config/Ultralytics/
+
+# Copiar código fuente de ultralytics
+COPY ultralytics-main/ ./ultralytics-main/
+
+# Instalar uv para manejo rápido de paquetes
+RUN pip install --upgrade pip && pip install uv
+
+# Instalar YOLO11 y dependencias
+WORKDIR /security_project/ultralytics-main
+RUN uv pip install --system -e ".[export]" \
+    albumentations \
+    pycocotools \
+    onnxruntime-gpu \
+    opencv-python \
+    opencv-contrib-python \
+    Pillow \
+    matplotlib \
+    seaborn \
+    pandas \
+    numpy \
+    scipy \
+    scikit-learn \
+    tqdm \
+    pyyaml \
+    requests \
+    psutil \
+    thop \
+    tensorboard \
+    clearml \
+    comet-ml \
+    wandb
+
+# Instalar dependencias adicionales para el proyecto de seguridad
+RUN uv pip install --system \
+    streamlit \
+    plotly \
+    fastapi \
+    uvicorn \
+    websockets \
+    python-multipart \
+    python-dotenv \
+    schedule \
+    pydantic \
+    loguru \
+    rich \
+    typer
+
+# Descargar modelo base YOLO11n (usado para entrenamiento)
+ADD https://github.com/ultralytics/assets/releases/download/v8.3.0/yolo11n.pt /security_project/models/yolo11n.pt
+
+# Volver al directorio principal del proyecto
+WORKDIR /security_project
+
+# Crear estructura de directorios para el proyecto
+RUN mkdir -p {datasets,models,runs,scripts,configs,logs,data/{train,val,test}/{images,labels},weights,exports,notebooks,test_images}
+
+# Copiar archivos de configuración del proyecto
+COPY --chown=root:root project_files/ ./
+
+# Copiar el modelo entrenado
+COPY --chown=root:root runs/gates/gate_detector_v1/weights/best.pt ./models/gate_detector_best.pt
+
+# Copiar scripts actualizados
+COPY --chown=root:root *.py ./scripts/
+COPY --chown=root:root configs/ ./configs/
+
+# Copiar documentación
+COPY --chown=root:root *.md ./docs/
+
+# Configurar permisos
+RUN chmod +x scripts/*.py scripts/*.sh 2>/dev/null || true
+
+# Limpiar archivos temporales
+RUN apt-get autoremove -y && apt-get clean && \
+    rm -rf /var/lib/apt/lists/* /tmp/* /var/tmp/* /root/.cache
+
+# Exponer puertos para aplicaciones
+EXPOSE 8000 8501 6006
+
+# Variables de entorno del proyecto
+ENV PROJECT_ROOT=/security_project
+ENV PYTHONPATH="${PYTHONPATH}:${PROJECT_ROOT}:${PROJECT_ROOT}/ultralytics-main"
+ENV CUDA_VISIBLE_DEVICES=0
+
+# Comando por defecto - Dashboard Streamlit
+CMD ["streamlit", "run", "apps/security_dashboard.py", "--server.port=8501", "--server.address=0.0.0.0"]
+
+# ===== INSTRUCCIONES DE USO =====
+#
+# Construir la imagen:
+# docker build -f Dockerfile.security -t yolo11-security:latest .
+#
+# Ejecutar Dashboard (modo principal):
+# docker run -it --rm \
+#   -v $(pwd)/data:/security_project/data \
+#   -v $(pwd)/models:/security_project/models \
+#   -v $(pwd)/runs:/security_project/runs \
+#   -p 8501:8501 \
+#   yolo11-security:latest
+#
+# Acceder al dashboard: http://localhost:8501
+#
+# Ejecutar con GPU (si está disponible):
+# docker run --gpus all -it --rm \
+#   -v $(pwd)/data:/security_project/data \
+#   -v $(pwd)/models:/security_project/models \
+#   -v $(pwd)/runs:/security_project/runs \
+#   -p 8501:8501 \
+#   yolo11-security:latest
+#
+# Ejecutar modo interactivo:
+# docker run -it --rm \
+#   -v $(pwd):/security_project/workspace \
+#   yolo11-security:latest bash
+#
+# ===== COMANDOS ÚTILES =====
+#
+# Probar el modelo:
+# docker exec -it <container_id> python scripts/test_model.py
+#
+# Ver métricas del modelo:
+# docker exec -it <container_id> python -c "from ultralytics import YOLO; model = YOLO('/security_project/models/gate_detector_best.pt'); print(model.info())"
+#
+# ===== NOTAS =====
+# - Modelo entrenado: 99.39% mAP@50 en detección de puertas
+# - Clases: gate_open, gate_closed
+# - Dashboard Streamlit en puerto 8501
+# - Los modelos se guardan en /security_project/models/
+# - Los datasets van en /security_project/data/
+# - Los resultados se guardan en /security_project/runs/

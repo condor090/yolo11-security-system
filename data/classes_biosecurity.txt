@@ -1,0 +1,16 @@
+gate_open
+gate_closed
+person_with_boots
+person_without_boots
+person_with_gloves
+person_without_gloves
+person_with_goggles
+person_without_goggles
+person_with_crocs
+person_without_crocs
+truck_piglets
+truck_feed
+vehicle_genetics
+truck_general
+car
+motorcycle

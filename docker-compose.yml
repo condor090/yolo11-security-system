@@ -1,0 +1,168 @@
+version: '3.8'
+
+services:
+  # Servicio principal de entrenamiento
+  yolo11-training:
+    build:
+      context: .
+      dockerfile: Dockerfile.security
+    container_name: yolo11-security-train
+    restart: unless-stopped
+    volumes:
+      - ./data:/security_project/data
+      - ./models:/security_project/models
+      - ./runs:/security_project/runs
+      - ./logs:/security_project/logs
+    environment:
+      - CUDA_VISIBLE_DEVICES=0
+      - PYTHONPATH=/security_project:/security_project/ultralytics-main
+    command: python scripts/train_security_model.py
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: 1
+              capabilities: [gpu]
+    profiles:
+      - training
+
+  # Dashboard web con Streamlit
+  yolo11-dashboard:
+    build:
+      context: .
+      dockerfile: Dockerfile.security
+    container_name: yolo11-security-dashboard
+    restart: unless-stopped
+    ports:
+      - "8501:8501"
+    volumes:
+      - ./data:/security_project/data
+      - ./models:/security_project/models
+      - ./runs:/security_project/runs
+      - ./logs:/security_project/logs
+    environment:
+      - CUDA_VISIBLE_DEVICES=0
+      - PYTHONPATH=/security_project:/security_project/ultralytics-main
+    command: streamlit run apps/security_dashboard.py --server.port 8501 --server.address 0.0.0.0
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: 1
+              capabilities: [gpu]
+    profiles:
+      - dashboard
+
+  # Sistema de inferencia en tiempo real
+  yolo11-inference:
+    build:
+      context: .
+      dockerfile: Dockerfile.security
+    container_name: yolo11-security-inference
+    restart: unless-stopped
+    volumes:
+      - ./data:/security_project/data
+      - ./models:/security_project/models
+      - ./runs:/security_project/runs
+      - ./logs:/security_project/logs
+      - /dev/video0:/dev/video0  # Webcam (si está disponible)
+    environment:
+      - CUDA_VISIBLE_DEVICES=0
+      - PYTHONPATH=/security_project:/security_project/ultralytics-main
+    command: python scripts/security_system.py --source 0 --confidence 0.6
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: 1
+              capabilities: [gpu]
+    profiles:
+      - inference
+
+  # Jupyter Lab para desarrollo y análisis
+  yolo11-jupyter:
+    build:
+      context: .
+      dockerfile: Dockerfile.security
+    container_name: yolo11-security-jupyter
+    restart: unless-stopped
+    ports:
+      - "8888:8888"
+    volumes:
+      - ./data:/security_project/data
+      - ./models:/security_project/models
+      - ./runs:/security_project/runs
+      - ./logs:/security_project/logs
+      - ./notebooks:/security_project/notebooks
+    environment:
+      - JUPYTER_ENABLE_LAB=yes
+      - JUPYTER_TOKEN=security123
+      - CUDA_VISIBLE_DEVICES=0
+      - PYTHONPATH=/security_project:/security_project/ultralytics-main
+    command: >
+      bash -c "pip install jupyterlab && 
+               jupyter lab --ip=0.0.0.0 --port=8888 --no-browser --allow-root --LabApp.token='security123'"
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: 1
+              capabilities: [gpu]
+    profiles:
+      - jupyter
+
+  # TensorBoard para monitoreo de entrenamiento
+  yolo11-tensorboard:
+    build:
+      context: .
+      dockerfile: Dockerfile.security
+    container_name: yolo11-security-tensorboard
+    restart: unless-stopped
+    ports:
+      - "6006:6006"
+    volumes:
+      - ./runs:/security_project/runs
+    command: tensorboard --logdir=/security_project/runs --host=0.0.0.0 --port=6006
+    profiles:
+      - tensorboard
+
+  # Base de datos para logs y estadísticas (opcional)
+  postgres:
+    image: postgres:13
+    container_name: yolo11-security-db
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: security_system
+      POSTGRES_USER: security_user
+      POSTGRES_PASSWORD: security_pass
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./sql:/docker-entrypoint-initdb.d
+    ports:
+      - "5432:5432"
+    profiles:
+      - database
+
+  # Redis para caching (opcional)
+  redis:
+    image: redis:7-alpine
+    container_name: yolo11-security-redis
+    restart: unless-stopped
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+    profiles:
+      - cache
+
+volumes:
+  postgres_data:
+  redis_data:
+
+networks:
+  default:
+    name: yolo11-security-network

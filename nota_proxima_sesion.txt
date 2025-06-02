@@ -1,0 +1,22 @@
+📍 Nota para la próxima sesión - 2 de Junio 2025
+================================================
+
+Estado del Sistema:
+✅ Alertas Telegram funcionando perfectamente
+✅ Imágenes enviándose correctamente (solo al expirar timer)
+✅ Sistema documentado completamente
+
+Próximos pasos sugeridos:
+1. Implementar detección multi-clase (próximo hito 8 de Junio)
+2. Agregar más cámaras al sistema
+3. Implementar grabación por eventos
+4. Dashboard multi-vista con grid de cámaras
+5. Chat IA inteligente (hito 15 de Junio)
+
+Pendientes menores:
+- Botones de acción en Telegram (Reconocer/Ignorar)
+- Grupos diferentes por zona/turno
+- Reporte diario automático
+- Métricas de tiempo de respuesta
+
+El sistema está maduro y listo para instalaciones reales.

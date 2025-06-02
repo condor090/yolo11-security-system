@@ -1,0 +1,26 @@
+{
+  "initial_interval": 5,
+  "max_interval": 60,
+  "intervals_by_zone": {
+    "entrance": 5,
+    "loading": 30,
+    "emergency": 3,
+    "door_1": 5,
+    "door_2": 10,
+    "door_3": 15
+  },
+  "include_images": true,
+  "escalation_enabled": true,
+  "escalation_pattern": [5, 10, 20, 30, 60],
+  "notification_message_template": {
+    "title": "🚨 ALERTA ACTIVA - Puerta Abierta",
+    "include_time_elapsed": true,
+    "include_zone_info": true,
+    "include_camera_info": true,
+    "urgency_levels": {
+      "low": "⚠️ ALERTA: Puerta abierta detectada",
+      "medium": "⚠️ URGENTE: Verificar zona lo antes posible",
+      "critical": "⚠️ CRÍTICO: Requiere atención INMEDIATA"
+    }
+  }
+}

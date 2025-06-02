@@ -1,0 +1,27 @@
+c83577c9 🧹 fix: Remover datasets (4.8GB) y archivos grandes del repositorio
+7a2f1cdf 📚 docs: Agregar checkpoint v3.9.0 - Sistema completo en producción
+4fe11727 🎯 v3.9.0 - YOMJAI Sistema Completo en Producción - 2 de Junio 2025
+8d5983a0 feat: Sistema de Alertas Telegram Persistentes con Imágenes v3.8.1
+944f96e9 🎯 v3.7.0 - Primera Cámara Real Conectada - Hito Primera Instalación
+395c123d 📚 docs: Checkpoint completo Telegram Integration v3.4.0
+2d21807a 🚀 feat: Integración completa de notificaciones Telegram
+ded73fef 🛡️ feat: Sistema de alarmas estabilizado - v3.3.0
+84cd0e92 feat: Modo Eco Inteligente implementado - Optimización automática de recursos
+7921d904 🦅 Actualizar bitácora - Hito histórico streaming en vivo
+d2732e43 📚 Documentación checkpoint streaming en vivo
+1067bcde 🎥 Streaming en tiempo real implementado - WebSocket + MJPEG
+4de3d3c1 📍 Mapa completo de checkpoints del proyecto
+799ef3a1 📚 Documentación checkpoint cámara RTSP
+fafd2c33 🚀 Checkpoint: Sistema con cámara RTSP funcionando
+86456b39 feat: Arquitectura profesional React + FastAPI v3.0
+37f89692 docs: Actualizar bitácora y estado del proyecto
+0ff95ae3 feat: Sistema de alertas V2 con temporizadores inteligentes
+8eac81ca feat: implementar sistema de alertas base (Fase 2 iniciada)
+ec745a9b feat: sistema completo con manejo inteligente de detecciones
+ab535228 fix: mejorar manejo de falsos positivos y detecciones duplicadas
+1ee34c96 feat: actualizar Docker para dashboard con modelo entrenado
+c9bae265 test: añadir pruebas automatizadas del dashboard
+f965017f feat: actualizar dashboard para usar modelo de puertas entrenado
+292989cd 🚀 CHECKPOINT: Modelo de puertas entrenado exitosamente - 99.39% mAP50
+c271f84c docs: Agregar documentación de estado del proyecto
+8f0a9f17 feat: Initial commit - YOLO11 Security System

@@ -1,0 +1,7 @@
+gate_open
+gate_closed
+authorized_person
+unauthorized_person
+truck
+car
+motorcycle

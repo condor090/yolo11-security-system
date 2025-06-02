@@ -1,0 +1,44 @@
+{
+  "cooldown_minutes": 5,
+  "max_alerts_per_hour": 10,
+  "severity_thresholds": {
+    "low": 0.50,
+    "medium": 0.65,
+    "high": 0.75,
+    "critical": 0.85
+  },
+  "channels": {
+    "email": {
+      "enabled": false,
+      "smtp_server": "smtp.gmail.com",
+      "smtp_port": 587,
+      "recipients": ["user@example.com"]
+    },
+    "telegram": {
+      "enabled": false,
+      "bot_token": "YOUR_BOT_TOKEN",
+      "chat_ids": []
+    },
+    "database": {
+      "enabled": true,
+      "path": "database/alerts.db"
+    }
+  },
+  "working_hours": {
+    "enabled": false,
+    "start": "08:00",
+    "end": "22:00",
+    "timezone": "America/Mexico_City"
+  },
+  "capture_settings": {
+    "save_images": true,
+    "image_quality": 85,
+    "max_storage_days": 30
+  },
+  "alert_messages": {
+    "gate_open": {
+      "title": "🚨 Alerta de Seguridad",
+      "template": "Se detectó {count} puerta(s) abierta(s) con {confidence}% de confianza"
+    }
+  }
+}

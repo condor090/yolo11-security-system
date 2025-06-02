@@ -1,0 +1,15 @@
+{
+  "telegram": {
+    "enabled": true,
+    "bot_token": "7907731965:AAE99G_I23PSPY4Iu2mB2c8J1l-fhTrYTK4",
+    "chat_id": "-4523731379",
+    "send_alerts": true,
+    "send_images": true
+  },
+  "email": {
+    "enabled": false,
+    "smtp_server": "smtp.gmail.com",
+    "smtp_port": 587,
+    "recipients": []
+  }
+}

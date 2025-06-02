@@ -1,0 +1,174 @@
+{
+  "timer_delays": {
+    "default": 15,
+    "entrance": 25,
+    "loading": 300,
+    "emergency": 5,
+    "cam1": 30,
+    "cam2": 60,
+    "cam3": 120
+  },
+  "timer_units": "seconds",
+  "sound_enabled": true,
+  "visual_alerts": true,
+  "clean_all_on_close": true,
+  "confidence_threshold": 0.75,
+  "detection_interval": 0.5,
+  "alarm_sound_enabled": true,
+  "alarm_duration": 10,
+  "cooldown_minutes": 5,
+  "max_alerts_per_hour": 10,
+  "severity_thresholds": {
+    "low": 0.5,
+    "medium": 0.65,
+    "high": 0.75,
+    "critical": 0.85
+  },
+  "channels": {
+    "email": {
+      "enabled": false,
+      "smtp_server": "smtp.gmail.com",
+      "smtp_port": 587,
+      "recipients": [
+        "user@example.com"
+      ]
+    },
+    "telegram": {
+      "enabled": false,
+      "bot_token": "YOUR_BOT_TOKEN",
+      "chat_ids": []
+    },
+    "database": {
+      "enabled": true,
+      "path": "database/alerts.db"
+    },
+    "sound": {
+      "enabled": true,
+      "volume": 0.8,
+      "alarm_file": "alerts/sounds/alarm.wav"
+    }
+  },
+  "working_hours": {
+    "enabled": false,
+    "start": "08:00",
+    "end": "22:00",
+    "timezone": "America/Mexico_City"
+  },
+  "capture_settings": {
+    "save_images": true,
+    "image_quality": 85,
+    "max_storage_days": 30
+  },
+  "alert_messages": {
+    "gate_open": {
+      "title": "\u23f1\ufe0f Puerta Abierta Detectada",
+      "template": "Puerta {door_id} abierta. Temporizador: {delay}s"
+    },
+    "gate_timeout": {
+      "title": "\ud83d\udea8 ALARMA ACTIVADA",
+      "template": "Puerta {door_id} abierta por {duration}s. \u00a1Requiere atenci\u00f3n inmediata!"
+    }
+  },
+  "timer_profiles": {
+    "normal": {
+      "description": "Horario normal de operaci\u00f3n",
+      "delays": {
+        "default": 30,
+        "entrance": 15,
+        "loading": 300
+      }
+    },
+    "rush_hour": {
+      "description": "Horas pico con m\u00e1s movimiento",
+      "delays": {
+        "default": 60,
+        "entrance": 30,
+        "loading": 300
+      }
+    },
+    "night": {
+      "description": "Horario nocturno - m\u00e1s restrictivo",
+      "delays": {
+        "default": 10,
+        "entrance": 10,
+        "loading": 60
+      }
+    }
+  },
+  "telegram": {
+    "enabled": true,
+    "bot_token": "7907731965:AAE99G_I23PSPY4Iu2mB2c8J1l-fhTrYTK4",
+    "chat_id": "-4523731379",
+    "send_alerts": true,
+    "send_images": true
+  },
+  "profiles": {
+    "normal": {
+      "name": "Horario Normal",
+      "icon": "\ud83c\udfe2",
+      "delays": {
+        "default": 30,
+        "entrance": 15,
+        "loading": 300,
+        "emergency": 5
+      }
+    },
+    "rush": {
+      "name": "Hora Pico",
+      "icon": "\ud83d\udea6",
+      "delays": {
+        "default": 45,
+        "entrance": 20,
+        "loading": 360,
+        "emergency": 10
+      }
+    },
+    "night": {
+      "name": "Nocturno",
+      "icon": "\ud83c\udf19",
+      "delays": {
+        "default": 15,
+        "entrance": 10,
+        "loading": 180,
+        "emergency": 5
+      }
+    },
+    "weekend": {
+      "name": "Fin de Semana",
+      "icon": "\ud83d\udcc5",
+      "delays": {
+        "default": 60,
+        "entrance": 30,
+        "loading": 600,
+        "emergency": 15
+      }
+    }
+  },
+  "zones": {
+    "entrance_door_0": {
+      "name": "Puerta Principal",
+      "delay": 15,
+      "enabled": true
+    },
+    "entrance": {
+      "name": "Entrada General",
+      "delay": 25,
+      "enabled": true
+    },
+    "door_1": {
+      "name": "Puerta Secundaria",
+      "delay": 30,
+      "enabled": true
+    },
+    "loading": {
+      "name": "Zona de Carga",
+      "delay": 300,
+      "enabled": true
+    },
+    "emergency": {
+      "name": "Salida de Emergencia",
+      "delay": 5,
+      "enabled": true
+    }
+  }
+}

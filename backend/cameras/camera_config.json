@@ -1,0 +1,38 @@
+{
+  "cam_001": {
+    "id": "cam_001",
+    "name": "Entrada Principal",
+    "ip": "192.168.1.11",
+    "username": "admin",
+    "password": "Admin123",
+    "rtsp_port": 554,
+    "channel": 1,
+    "stream": "main",
+    "zone_id": "door_1",
+    "enabled": true
+  },
+  "cam_002": {
+    "id": "cam_002",
+    "name": "Zona de Carga",
+    "ip": "192.168.1.101",
+    "username": "admin",
+    "password": "password",
+    "rtsp_port": 554,
+    "channel": 1,
+    "stream": "main",
+    "zone_id": "loading",
+    "enabled": true
+  },
+  "cam_003": {
+    "id": "cam_003",
+    "name": "Salida de Emergencia",
+    "ip": "192.168.1.102",
+    "username": "admin",
+    "password": "password",
+    "rtsp_port": 554,
+    "channel": 1,
+    "stream": "sub",
+    "zone_id": "emergency",
+    "enabled": false
+  }
+}

@@ -1,0 +1,260 @@
+{
+  "timestamp": "2025-05-24T18:16:50.369678",
+  "statistics": {
+    "total_processed": 32488,
+    "gates_open": 24322,
+    "gates_closed": 3002,
+    "uncertain": 5164,
+    "errors": 0,
+    "by_hour": {
+      "22": {
+        "open": 1162,
+        "closed": 56,
+        "uncertain": 297
+      },
+      "17": {
+        "open": 3930,
+        "closed": 220,
+        "uncertain": 880
+      },
+      "12": {
+        "open": 427,
+        "closed": 37,
+        "uncertain": 20
+      },
+      "21": {
+        "open": 1706,
+        "closed": 101,
+        "uncertain": 316
+      },
+      "19": {
+        "open": 838,
+        "closed": 30,
+        "uncertain": 303
+      },
+      "18": {
+        "open": 1420,
+        "closed": 75,
+        "uncertain": 611
+      },
+      "0": {
+        "open": 1430,
+        "closed": 125,
+        "uncertain": 297
+      },
+      "13": {
+        "open": 1812,
+        "closed": 483,
+        "uncertain": 394
+      },
+      "14": {
+        "open": 2545,
+        "closed": 691,
+        "uncertain": 517
+      },
+      "23": {
+        "open": 1276,
+        "closed": 116,
+        "uncertain": 328
+      },
+      "15": {
+        "open": 1798,
+        "closed": 400,
+        "uncertain": 275
+      },
+      "1": {
+        "open": 764,
+        "closed": 216,
+        "uncertain": 93
+      },
+      "4": {
+        "open": 301,
+        "closed": 8,
+        "uncertain": 1
+      },
+      "20": {
+        "open": 1147,
+        "closed": 74,
+        "uncertain": 334
+      },
+      "2": {
+        "open": 380,
+        "closed": 92,
+        "uncertain": 17
+      },
+      "16": {
+        "open": 2563,
+        "closed": 196,
+        "uncertain": 467
+      },
+      "10": {
+        "open": 35,
+        "closed": 0,
+        "uncertain": 0
+      },
+      "9": {
+        "open": 46,
+        "closed": 7,
+        "uncertain": 0
+      },
+      "11": {
+        "open": 145,
+        "closed": 37,
+        "uncertain": 2
+      },
+      "5": {
+        "open": 147,
+        "closed": 7,
+        "uncertain": 4
+      },
+      "3": {
+        "open": 258,
+        "closed": 24,
+        "uncertain": 8
+      },
+      "8": {
+        "open": 73,
+        "closed": 4,
+        "uncertain": 0
+      },
+      "7": {
+        "open": 53,
+        "closed": 2,
+        "uncertain": 0
+      },
+      "6": {
+        "open": 66,
+        "closed": 1,
+        "uncertain": 0
+      }
+    }
+  },
+  "hourly_distribution": {
+    "22": {
+      "open": 1162,
+      "closed": 56,
+      "uncertain": 297
+    },
+    "17": {
+      "open": 3930,
+      "closed": 220,
+      "uncertain": 880
+    },
+    "12": {
+      "open": 427,
+      "closed": 37,
+      "uncertain": 20
+    },
+    "21": {
+      "open": 1706,
+      "closed": 101,
+      "uncertain": 316
+    },
+    "19": {
+      "open": 838,
+      "closed": 30,
+      "uncertain": 303
+    },
+    "18": {
+      "open": 1420,
+      "closed": 75,
+      "uncertain": 611
+    },
+    "0": {
+      "open": 1430,
+      "closed": 125,
+      "uncertain": 297
+    },
+    "13": {
+      "open": 1812,
+      "closed": 483,
+      "uncertain": 394
+    },
+    "14": {
+      "open": 2545,
+      "closed": 691,
+      "uncertain": 517
+    },
+    "23": {
+      "open": 1276,
+      "closed": 116,
+      "uncertain": 328
+    },
+    "15": {
+      "open": 1798,
+      "closed": 400,
+      "uncertain": 275
+    },
+    "1": {
+      "open": 764,
+      "closed": 216,
+      "uncertain": 93
+    },
+    "4": {
+      "open": 301,
+      "closed": 8,
+      "uncertain": 1
+    },
+    "20": {
+      "open": 1147,
+      "closed": 74,
+      "uncertain": 334
+    },
+    "2": {
+      "open": 380,
+      "closed": 92,
+      "uncertain": 17
+    },
+    "16": {
+      "open": 2563,
+      "closed": 196,
+      "uncertain": 467
+    },
+    "10": {
+      "open": 35,
+      "closed": 0,
+      "uncertain": 0
+    },
+    "9": {
+      "open": 46,
+      "closed": 7,
+      "uncertain": 0
+    },
+    "11": {
+      "open": 145,
+      "closed": 37,
+      "uncertain": 2
+    },
+    "5": {
+      "open": 147,
+      "closed": 7,
+      "uncertain": 4
+    },
+    "3": {
+      "open": 258,
+      "closed": 24,
+      "uncertain": 8
+    },
+    "8": {
+      "open": 73,
+      "closed": 4,
+      "uncertain": 0
+    },
+    "7": {
+      "open": 53,
+      "closed": 2,
+      "uncertain": 0
+    },
+    "6": {
+      "open": 66,
+      "closed": 1,
+      "uncertain": 0
+    }
+  },
+  "directories": {
+    "source": "/Users/Shared/yolo11_project/data/telegram_photos",
+    "output": "/Users/Shared/yolo11_project/data/classified",
+    "selected_open": "/Users/Shared/yolo11_project/data/classified/selected_1000_open",
+    "selected_closed": "/Users/Shared/yolo11_project/data/classified/selected_1000_closed"
+  }
+}
