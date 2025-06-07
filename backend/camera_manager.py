@@ -1,6 +1,7 @@
 """
 Camera Manager - Gestión de cámaras Hikvision
 Maneja streams RTSP y configuración de cámaras
+Ahora con almacenamiento en base de datos SQLite
 """
 
 import cv2
@@ -13,6 +14,14 @@ import numpy as np
 from datetime import datetime, timedelta
 import json
 from pathlib import Path
+
+# Importar el gestor de base de datos
+try:
+    from backend.utils.camera_config_db import camera_config_db
+    DB_AVAILABLE = True
+except ImportError:
+    DB_AVAILABLE = False
+    camera_config_db = None
 
 logger = logging.getLogger(__name__)
 
@@ -231,10 +240,47 @@ class CameraManager:
         self.config_path = Path(config_path)
         self.cameras: Dict[str, CameraStream] = {}
         self.configs: Dict[str, CameraConfig] = {}
+        self.use_db = DB_AVAILABLE and camera_config_db is not None
+        
+        if self.use_db:
+            logger.info("Usando base de datos SQLite para configuraciones de cámaras")
+        else:
+            logger.warning("Base de datos no disponible, usando archivo JSON")
+            
         self.load_configs()
         
     def load_configs(self):
-        """Cargar configuraciones de cámaras desde archivo"""
+        """Cargar configuraciones de cámaras desde base de datos o archivo"""
+        if self.use_db:
+            # Cargar desde base de datos
+            try:
+                configs_data = camera_config_db.get_all_camera_configs()
+                for cam_id, cam_data in configs_data.items():
+                    # Convertir de dict a CameraConfig
+                    config_params = {
+                        'id': cam_data['id'],
+                        'name': cam_data['name'],
+                        'ip': cam_data['ip'],
+                        'username': cam_data['username'],
+                        'password': cam_data['password'],
+                        'rtsp_port': cam_data.get('rtsp_port', 554),
+                        'channel': cam_data.get('channel', 1),
+                        'stream': cam_data.get('stream', 'main'),
+                        'zone_id': cam_data.get('zone_id'),
+                        'enabled': cam_data.get('enabled', True)
+                    }
+                    self.configs[cam_id] = CameraConfig(**config_params)
+                logger.info(f"Cargadas {len(self.configs)} cámaras desde base de datos")
+            except Exception as e:
+                logger.error(f"Error cargando configuraciones desde DB: {e}")
+                # Fallback a JSON
+                self._load_from_json()
+        else:
+            # Cargar desde JSON
+            self._load_from_json()
+            
+    def _load_from_json(self):
+        """Cargar configuraciones desde archivo JSON (fallback)"""
         self.config_path.parent.mkdir(exist_ok=True)
         
         if self.config_path.exists():
@@ -243,15 +289,40 @@ class CameraManager:
                     configs_data = json.load(f)
                     for cam_id, cam_data in configs_data.items():
                         self.configs[cam_id] = CameraConfig(**cam_data)
-                logger.info(f"Cargadas {len(self.configs)} cámaras")
+                logger.info(f"Cargadas {len(self.configs)} cámaras desde JSON")
             except Exception as e:
-                logger.error(f"Error cargando configuraciones: {e}")
-        else:
-            # Crear archivo de ejemplo
-            self.save_configs()
-    
+                logger.error(f"Error cargando configuraciones desde JSON: {e}")
+        
     def save_configs(self):
         """Guardar configuraciones actuales"""
+        if self.use_db:
+            # Guardar en base de datos
+            try:
+                for cam_id, config in self.configs.items():
+                    config_dict = {
+                        'id': config.id,
+                        'name': config.name,
+                        'ip': config.ip,
+                        'username': config.username,
+                        'password': config.password,
+                        'rtsp_port': config.rtsp_port,
+                        'channel': config.channel,
+                        'stream': config.stream,
+                        'zone_id': config.zone_id,
+                        'enabled': config.enabled
+                    }
+                    camera_config_db.save_camera_config(config_dict)
+                logger.info("Configuraciones guardadas en base de datos")
+            except Exception as e:
+                logger.error(f"Error guardando en DB: {e}")
+                # Fallback a JSON
+                self._save_to_json()
+        else:
+            # Guardar en JSON
+            self._save_to_json()
+            
+    def _save_to_json(self):
+        """Guardar configuraciones en archivo JSON (fallback)"""
         configs_data = {}
         for cam_id, config in self.configs.items():
             configs_data[cam_id] = {
@@ -269,7 +340,7 @@ class CameraManager:
         
         with open(self.config_path, 'w') as f:
             json.dump(configs_data, f, indent=2)
-        logger.info("Configuraciones guardadas")
+        logger.info("Configuraciones guardadas en JSON")
     
     def add_camera(self, config: CameraConfig):
         """Agregar nueva cámara"""
@@ -286,6 +357,16 @@ class CameraManager:
         
         if camera_id in self.configs:
             del self.configs[camera_id]
+            
+            # Eliminar de base de datos
+            if self.use_db:
+                try:
+                    camera_config_db.delete_camera_config(camera_id)
+                    logger.info(f"Cámara {camera_id} eliminada de DB")
+                except Exception as e:
+                    logger.error(f"Error eliminando de DB: {e}")
+            
+            # También actualizar el archivo JSON para mantener sincronización
             self.save_configs()
     
     def start_camera(self, camera_id: str):

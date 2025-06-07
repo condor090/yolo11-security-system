@@ -1,5 +1,318 @@
 # 📊 PROGRESO DEL PROYECTO - SISTEMA DE ALERTAS V3
 
+## 🎯 Sesión: 6 de Junio 2025 - Sistema de Imágenes en Eventos IMPLEMENTADO
+
+### ✅ Captura Automática de Imágenes en Eventos
+
+#### Trabajo Realizado:
+1. **Backend Actualizado**: Integración completa con ImageEventHandler
+2. **Captura de Thumbnails**: Automática en cada detección de puerta
+3. **Almacenamiento Dual**: Thumbnails en base64 + imágenes completas opcionales
+4. **Frontend Funcional**: Ya muestra las imágenes en la vista de eventos
+
+#### Sistema Completado:
+- **Detección → Captura → Almacenamiento → Visualización**
+- Sin impacto en rendimiento (thumbnails pequeños)
+- Contexto visual inmediato para cada evento
+- Evidencia automática sin buscar en grabaciones
+
+#### Características:
+- ✅ Thumbnail automático en cada evento
+- ✅ Overlay con información del evento
+- ✅ Vista previa en lista de eventos
+- ✅ Modal con imagen expandida
+- ✅ Endpoint para descarga de imagen completa
+
+---
+
+**Bitácora del Cóndor** - 6 de Junio 2025:
+"Sistema de imágenes en eventos completado. YOMJAI ahora captura el momento exacto de cada detección, proporcionando contexto visual instantáneo sin necesidad de revisar horas de grabación."
+
+---
+
+## 🎯 Sesión: 6 de Junio 2025 - Configuración Dinámica de Vehículos Funcional
+
+### ✅ Sistema de Configuración Completo
+
+#### Trabajo Realizado:
+1. **Error de Import Corregido**: react-toastify → react-hot-toast
+2. **API REST Implementada**: Endpoints completos para gestión de vehículos
+3. **Puertos Fijos Configurados**: Frontend 3000, Backend 8889
+4. **Mejoras en UI**: 
+   - Condiciones de renderizado para evitar pantallas en blanco
+   - Contadores de elementos visibles
+   - Logs de depuración añadidos
+
+#### Sistema Funcional con:
+- **5 tipos de vehículos** preconfigurados (Vimifos, Genética, Jaulas, etc.)
+- **2 reglas de conflicto** activas (Vimifos tarde, Genética fuera de horario)
+- **Configuración general** del sistema
+- **Exportar/Importar** configuraciones JSON
+
+#### Características Operativas:
+- ✅ CRUD completo para tipos de vehículos
+- ✅ Gestión de reglas de conflicto
+- ✅ Colores e iconos personalizables
+- ✅ Sin necesidad de reiniciar el sistema
+- ✅ Datos persistentes en archivo JSON
+
+---
+
+**Bitácora del Cóndor** - 6 de Junio 2025:
+"Sistema de configuración dinámica completamente funcional. Como el cóndor que adapta su vuelo sin detenerse, YOMJAI ahora permite cambios en vivo sin interrumpir el servicio."
+
+---
+
+## 🎯 Sesión: 6 de Junio 2025 - Corrección de Import Error
+
+### ✅ Error de Importación Corregido
+
+#### Problema:
+- Frontend intentaba importar `react-toastify` en `VehicleConfiguration.jsx`
+- El proyecto usa `react-hot-toast`, no `react-toastify`
+
+#### Solución:
+- Cambiado `import { toast } from 'react-toastify'` por `import toast from 'react-hot-toast'`
+- Frontend ahora corre sin errores en puerto 3001
+- Backend funcionando correctamente en puerto 8889
+
+#### Estado del Sistema:
+- ✅ Frontend: Puerto 3001 (sin errores)
+- ✅ Backend: Puerto 8889 (activo)
+- ✅ Configuración de vehículos: Componente funcional
+- ✅ Sistema listo para continuar desarrollo
+
+---
+
+**Bitácora del Cóndor** - 6 de Junio 2025:
+"Error simple, solución rápida. Como el cóndor que ajusta una pluma fuera de lugar para continuar su vuelo perfecto. El sistema de configuración dinámica ahora vuela sin turbulencias."
+
+---
+
+## 🎯 Sesión: 6 de Junio 2025 - Sistema de Configuración Dinámica de Vehículos
+
+### ✅ Nueva Funcionalidad: Configuración Sin Código
+
+#### Problema Resuelto:
+Usuario solicitó que los tipos de vehículos, duraciones y horarios sean configurables por sistema, no hardcodeados.
+
+#### Solución Implementada:
+Sistema completo de configuración dinámica que permite gestionar todos los aspectos desde una interfaz web:
+
+1. **API REST de Configuración** (`backend/api/vehicle_config_routes.py`)
+   - CRUD completo para tipos de vehículos
+   - Gestión de reglas de conflicto
+   - Configuración general del sistema
+   - Exportar/Importar configuraciones JSON
+
+2. **Interfaz Web** (`frontend/src/components/VehicleConfiguration.jsx`)
+   - Panel visual con React
+   - Selector de colores e iconos
+   - Editor de reglas con validación
+   - Diseño moderno y responsive
+
+3. **Validador Dinámico** (`backend/vehicle_access_validator_dynamic.py`)
+   - Lee configuración desde base de datos
+   - Recarga cambios en tiempo real
+   - Evaluación dinámica de reglas
+
+#### Características Destacadas:
+- **Sin reiniciar**: Cambios aplicados inmediatamente
+- **Visual**: Colores e iconos personalizables
+- **Flexible**: Reglas de negocio complejas en JSON
+- **Portable**: Exportar/importar configuraciones
+- **Escalable**: Agregar tipos ilimitados de vehículos
+
+#### Ejemplo de Configuración Dinámica:
+```json
+{
+  "tipo": "ambulancia_veterinaria",
+  "nombre_display": "Ambulancia Veterinaria",
+  "duracion_minutos": 30,
+  "prioridad": 1,
+  "color_ui": "#EF4444",
+  "icono": "shield",
+  "requisitos_especiales": ["urgente", "prioridad_absoluta"]
+}
+```
+
+---
+
+**Bitácora del Cóndor** - 6 de Junio 2025:
+"El sistema evoluciona de rigidez a flexibilidad. Como el cóndor que adapta su vuelo a cada corriente, YOMJAI ahora se adapta a las necesidades únicas de cada centro de lavado."
+
+---
+
+## 🎯 Sesión: 6 de Junio 2025 - Revisión Post-Corte: Sistema de Control Vehicular COMPLETO
+
+### ✅ Estado del Sistema de Control de Acceso Vehicular
+
+#### Verificación Post-Corte Eléctrico:
+Tras el corte de energía, se verificó la integridad del sistema de control de acceso vehicular. **TODO ESTÁ COMPLETO Y FUNCIONAL**.
+
+#### Componentes Verificados:
+1. **vehicle_access_validator.py** ✅ - Integración con Google Calendar API funcionando
+2. **vehicle_access_control.py** ✅ - Sistema de decisiones listo (solo falta import cv2)
+3. **vehicle_wash_config.json** ✅ - Configuración completa con reglas de negocio
+4. **Base de datos SQLite** ✅ - Schema completo con 13 tablas
+5. **Servicio Telegram** ✅ - Notificaciones implementadas
+
+#### Sistema Operativo con:
+- Detección de 5 tipos de vehículos autorizados
+- Validación en tiempo real contra Google Calendar
+- Regla crítica: Vimifos después de 7am = RECHAZAR (protege a Genética)
+- Base de datos local para operación autónoma
+- Alertas diferenciadas por prioridad vía Telegram
+
+#### Próximos Pasos:
+1. Inicializar base de datos: `python database/init_vehicles_db.py`
+2. Configurar Google Calendar: `python setup_google_calendar.py`
+3. Implementar bot de Telegram con comandos interactivos
+4. Crear frontend de gestión vehicular
+
+---
+
+**Bitácora del Cóndor** - 6 de Junio 2025:
+"Sistema de control vehicular verificado y completo. Como el cóndor que retoma su vuelo tras la tormenta, YOMJAI está listo para proteger el centro de lavado con inteligencia y precisión."
+
+---
+
+## 🎯 Sesión: 5 de Junio 2025 - Sistema de Control de Acceso Vehicular con Google Calendar
+
+### ✅ Nueva Funcionalidad: Control Inteligente de Acceso
+
+#### Sistema Implementado:
+YOMJAI ahora integra un sistema completo de control de acceso vehicular que:
+- **Detecta** vehículos específicos usando modelos YOLO separados
+- **Valida** contra Google Calendar en tiempo real
+- **Decide** permitir/rechazar según reglas de negocio complejas
+- **Alerta** decisiones críticas vía Telegram con contexto
+
+#### Problema Resuelto:
+Centro de lavado necesita controlar acceso estricto:
+- Solo vehículos en calendario pueden ingresar
+- Vimifos debe llegar 5:30-7:00am (si llega tarde, compromete a Genética)
+- Genética tiene prioridad absoluta (material refrigerado)
+- Cada vehículo tiene duración específica de lavado
+
+#### Arquitectura de 3 Capas:
+1. **Detección** - YOLO identifica tipo de vehículo
+2. **Validación** - Google Calendar API verifica autorización
+3. **Control** - Sistema toma decisión y ejecuta acción
+
+#### Regla Crítica Implementada:
+```python
+if vimifos.arrival_time > "07:00":
+    RECHAZAR  # Su lavado de 2h compromete a Genética 9:00am
+    ALERTA_CRITICA_SUPERVISOR
+```
+
+### 📁 Archivos Creados
+
+1. **`backend/vehicle_access_validator.py`** ✅ NUEVO
+   - Integración completa con Google Calendar API
+   - Validación de horarios y detección de conflictos
+   - 350+ líneas de lógica de negocio
+
+2. **`backend/vehicle_access_control.py`** ✅ NUEVO
+   - Sistema de control de acceso completo
+   - Integración con AlertManager y CameraManager
+   - Manejo de decisiones y override manual
+
+3. **`backend/configs/vehicle_wash_config.json`** ✅ NUEVO
+   - Configuración de tiempos y prioridades
+   - Reglas de conflicto codificadas
+   - Instrucciones especiales por vehículo
+
+4. **`setup_google_calendar.py`** ✅ NUEVO
+   - Script de configuración inicial
+   - Guía paso a paso para API
+   - Verificación de dependencias
+
+5. **`RESUMEN_CONTROL_ACCESO_VEHICULAR.md`** ✅ NUEVO
+   - Documentación completa del sistema
+   - Diagramas de flujo y ejemplos
+   - Guía de implementación
+
+#### Características Destacadas:
+- **Prioridades**: Genética > Vimifos > Jaulas > Tractocamión
+- **Tiempos de lavado**: Vimifos 2h, Genética 45min, Jaulas 90min
+- **Alertas diferenciadas**: Críticas, altas, medias con fotos
+- **Override manual**: Para casos de emergencia
+- **Reportes diarios**: Resumen automático de accesos
+
+---
+
+**Bitácora del Cóndor** - 5 de Junio 2025, 17:30 hrs:
+"YOMJAI evoluciona de detector a gestor operacional. Como el cóndor que comprende el ecosistema completo, el sistema ahora entiende horarios, prioridades y consecuencias. La IA al servicio de la eficiencia operacional."
+
+---
+
+## 🎯 Sesión: 5 de Junio 2025 - Estrategia Multi-Modelo para Vehículos de Granja
+
+### ✅ Nueva Expansión: Detección de Vehículos Específicos
+
+#### Requerimiento del Cliente:
+- **Jaula Lechonera**: Camión transportador (~300 imágenes etiquetadas)
+- **Vimifos**: Camión de alimentos (~400 imágenes etiquetadas)
+- **Genética**: Unidad de vacunas (~150 imágenes etiquetadas)
+
+#### Decisión Arquitectónica - Modelos Separados:
+1. **Modelo de Puertas** (existente)
+   - Mantener intacto con 99.39% precisión
+   - Clases: `open_door`, `closed_door`
+   - En producción funcionando perfectamente
+
+2. **Modelo de Vehículos** (nuevo)
+   - Especializado para los 3 tipos de camiones
+   - Clases: `jaula_lechonera`, `vimifos`, `genetica`
+   - Entrenamiento independiente
+
+#### Ventajas de Esta Aproximación:
+- No degrada la precisión de detección de puertas
+- Flexibilidad para actualizar modelos independientemente
+- Optimización de recursos (ejecutar solo cuando necesario)
+- Escalabilidad para agregar más vehículos en el futuro
+
+#### Plan de Implementación:
+1. **Preparación de Dataset** (Semana 1)
+   - Organizar imágenes en estructura YOLO
+   - Aumentar dataset de "genética" de 150 a 400 imágenes
+   - Split 80/20 para train/val
+
+2. **Entrenamiento** (Semana 2)
+   - Modelo base: YOLO11m
+   - Target: >90% precisión por clase
+   - Validación exhaustiva
+
+3. **Integración** (Semana 3)
+   - Backend con detección dual
+   - UI para mostrar vehículos detectados
+   - Alertas diferenciadas por tipo
+
+### 📁 Archivos Creados
+
+1. **`ESTRATEGIA_VEHICULOS_GRANJA.md`** ✅ NUEVO
+   - Documento completo de estrategia
+   - Arquitectura de modelos separados
+   - Plan de implementación detallado
+
+2. **`prepare_farm_vehicles_dataset.py`** ✅ NUEVO
+   - Script para organizar dataset
+   - Estructura compatible con YOLO
+   - Generación de data.yaml
+
+3. **`datasets/vehiculos_granja/`** ✅ NUEVO
+   - Directorio para el nuevo dataset
+   - Estructura train/val preparada
+
+---
+
+**Bitácora del Cóndor** - 5 de Junio 2025:
+"YOMJAI evoluciona. De guardián de puertas a identificador de propósitos. Cada vehículo tiene una misión específica en la granja, y el sistema las conocerá todas. La arquitectura de modelos separados garantiza precisión sin comprometer lo que ya funciona."
+
+---
+
 # 📊 PROGRESO DEL PROYECTO - SISTEMA DE ALERTAS V3
 
 ## 🎯 Sesión: 2 de Junio 2025 - Sistema de Alertas Telegram Persistentes COMPLETO

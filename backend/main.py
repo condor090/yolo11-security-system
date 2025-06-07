@@ -11,6 +11,7 @@ from contextlib import asynccontextmanager
 import asyncio
 import json
 import logging
+import os
 from datetime import datetime
 from typing import Dict, List, Optional, Any
 from pathlib import Path
@@ -47,6 +48,7 @@ from backend.camera_manager import CameraManager, CameraConfig
 from backend.utils.detection_manager import DetectionManager
 from backend.utils.eco_mode import EcoModeManager, SystemState
 from backend.utils.telegram_service import telegram_service
+from backend.utils.image_event_handler import image_handler
 try:
     from backend.optimized_config import DETECTION_CONFIG, RESOURCE_CONFIG
 except ImportError:
@@ -64,8 +66,14 @@ class ConnectionManager:
         logger.info(f"Cliente conectado. Total: {len(self.active_connections)}")
         
     def disconnect(self, websocket: WebSocket):
-        self.active_connections.remove(websocket)
-        logger.info(f"Cliente desconectado. Total: {len(self.active_connections)}")
+        try:
+            if websocket in self.active_connections:
+                self.active_connections.remove(websocket)
+                logger.info(f"Cliente desconectado. Total: {len(self.active_connections)}")
+            else:
+                logger.warning("Intento de desconectar un websocket que no está en la lista")
+        except Exception as e:
+            logger.error(f"Error al desconectar websocket: {e}")
         
     async def send_personal_message(self, message: str, websocket: WebSocket):
         await websocket.send_text(message)
@@ -82,7 +90,11 @@ class ConnectionManager:
         
         # Limpiar conexiones muertas
         for conn in dead_connections:
-            self.active_connections.remove(conn)
+            try:
+                if conn in self.active_connections:
+                    self.active_connections.remove(conn)
+            except Exception as e:
+                logger.error(f"Error limpiando conexión muerta: {e}")
 
 # Instancias globales
 manager = ConnectionManager()
@@ -124,10 +136,21 @@ async def lifespan(app: FastAPI):
         )
         logger.info(f"Telegram configurado: {telegram_service.enabled}")
     
-    # Cargar CameraManager
-    camera_manager = CameraManager()
-    camera_manager.start_all()
-    logger.info("CameraManager inicializado")
+    # Cargar CameraManager con manejo de errores
+    try:
+        camera_manager = CameraManager()
+        # Solo iniciar cámaras si no está deshabilitado
+        if not os.environ.get('YOMJAI_NO_AUTO_CAMERAS'):
+            try:
+                camera_manager.start_all()
+                logger.info("CameraManager: cámaras iniciadas")
+            except Exception as e:
+                logger.warning(f"No se pudieron iniciar todas las cámaras: {e}")
+        else:
+            logger.info("CameraManager inicializado (sin iniciar cámaras automáticamente)")
+    except Exception as e:
+        logger.error(f"Error inicializando CameraManager: {e}")
+        camera_manager = None
     
     # Inicializar DetectionManager
     detection_manager = DetectionManager(
@@ -139,6 +162,27 @@ async def lifespan(app: FastAPI):
     # Inicializar EcoModeManager
     eco_manager = EcoModeManager()
     logger.info("Modo Eco inicializado en estado IDLE")
+    
+    # Crear directorio para imágenes de eventos
+    Path("/Users/Shared/yolo11_project/event_images").mkdir(parents=True, exist_ok=True)
+    logger.info("Directorio de imágenes de eventos listo")
+    
+    # Registrar evento de inicio del sistema
+    try:
+        from backend.utils.event_logger import event_logger, EventTypes
+        event_logger.log_event(
+            event_type=EventTypes.SYSTEM,
+            event_name="Sistema reiniciado",
+            description="YOMJAI iniciado correctamente",
+            severity="success",
+            metadata={
+                'model_loaded': model is not None,
+                'cameras_loaded': camera_manager is not None,
+                'eco_mode': 'active'
+            }
+        )
+    except Exception as e:
+        logger.error(f"Error registrando evento de inicio: {e}")
     
     # Iniciar monitor de temporizadores
     asyncio.create_task(timer_monitor())
@@ -166,6 +210,14 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+# Importar rutas de configuración de vehículos
+try:
+    from api.vehicle_config_routes import router as vehicle_config_router
+    app.include_router(vehicle_config_router)
+    logger.info("✅ Módulo de configuración de vehículos cargado")
+except ImportError as e:
+    logger.warning(f"⚠️ Módulo de configuración de vehículos no disponible: {e}")
 
 # ==================== ENDPOINTS ====================
 
@@ -285,6 +337,20 @@ async def acknowledge_timer(door_id: str):
         raise HTTPException(status_code=503, detail="AlertManager no disponible")
     
     alert_manager.acknowledge_alarm(door_id)
+    
+    # Registrar evento
+    try:
+        from backend.utils.event_logger import event_logger, EventTypes
+        zone_name = alert_manager.config['zones'].get(door_id, {}).get('name', door_id)
+        event_logger.log_event(
+            event_type=EventTypes.ALARM_ACKNOWLEDGED,
+            event_name=f"Alarma reconocida - {zone_name}",
+            description=f"El operador reconoció la alarma en {zone_name}",
+            zone_id=door_id,
+            severity="info"
+        )
+    except Exception as e:
+        logger.error(f"Error registrando evento: {e}")
     
     # Broadcast actualización
     await manager.broadcast({
@@ -425,6 +491,43 @@ async def get_statistics():
     if detection_manager:
         stats['zone_states'] = detection_manager.get_zone_states()
     
+    # Agregar estadísticas por hora para la gráfica
+    try:
+        from backend.utils.event_logger import event_logger
+        
+        # Obtener estadísticas de las últimas 24 horas
+        hourly_stats_dict = event_logger.get_hourly_stats(days=1)
+        
+        # Convertir a lista ordenada para la gráfica
+        hourly_stats = []
+        for hour in range(24):
+            hourly_stats.append({
+                'hour': hour,
+                'count': hourly_stats_dict.get(hour, 0)
+            })
+        
+        stats['hourly_activity'] = hourly_stats
+        
+        # Actualizar el total_alerts con los eventos reales de la DB
+        total_events_24h = sum(hourly_stats_dict.values())
+        stats['total_alerts'] = total_events_24h
+        
+        # Obtener estadísticas adicionales de eventos
+        event_stats = event_logger.get_event_stats()
+        
+        # Contar detecciones del último día
+        if 'by_type' in event_stats:
+            stats['detections_24h'] = event_stats['by_type'].get('door_open', 0) + event_stats['by_type'].get('door_close', 0)
+        else:
+            stats['detections_24h'] = total_events_24h
+            
+    except Exception as e:
+        logger.error(f"Error obteniendo estadísticas por hora: {e}")
+        # Datos de respaldo si falla
+        stats['hourly_activity'] = [{'hour': i, 'count': 0} for i in range(24)]
+        stats['total_alerts'] = 0
+        stats['detections_24h'] = 0
+    
     return {"statistics": stats}
 
 @app.get("/api/zones")
@@ -434,6 +537,78 @@ async def get_zones():
         return {"zones": {}}
     
     return {"zones": detection_manager.get_zone_states()}
+
+# ==================== EVENTOS ====================
+
+@app.get("/api/events/recent")
+async def get_recent_events(
+    limit: int = 20, 
+    offset: int = 0,
+    search: str = None
+):
+    """Obtiene los eventos recientes del sistema con opción de búsqueda"""
+    try:
+        # Importar aquí para evitar circular imports
+        from backend.utils.event_logger import event_logger
+        
+        events = event_logger.get_recent_events(
+            limit=limit, 
+            offset=offset,
+            search=search
+        )
+        return {"events": events}
+    except Exception as e:
+        logger.error(f"Error obteniendo eventos: {e}")
+        return {"events": []}
+
+@app.get("/api/events/stats")
+async def get_event_stats():
+    """Obtiene estadísticas de eventos"""
+    try:
+        from backend.utils.event_logger import event_logger
+        stats = event_logger.get_event_stats()
+        return {"stats": stats}
+    except Exception as e:
+        logger.error(f"Error obteniendo estadísticas de eventos: {e}")
+        return {"stats": {}}
+
+@app.get("/api/events/{event_id}/image")
+async def get_event_image(event_id: int):
+    """Obtener la imagen completa de un evento"""
+    try:
+        from backend.utils.event_logger import event_logger
+        
+        # Obtener información del evento
+        with event_logger._get_connection() as conn:
+            cursor = conn.execute(
+                'SELECT image_path, thumbnail_base64 FROM events WHERE id = ?',
+                (event_id,)
+            )
+            row = cursor.fetchone()
+            
+            if not row:
+                raise HTTPException(status_code=404, detail="Evento no encontrado")
+            
+            image_path = row['image_path']
+            thumbnail = row['thumbnail_base64']
+            
+            # Si hay archivo guardado, devolverlo
+            if image_path and os.path.exists(image_path):
+                return FileResponse(image_path)
+            
+            # Si solo hay thumbnail, decodificarlo y devolverlo
+            elif thumbnail:
+                img_data = base64.b64decode(thumbnail)
+                return StreamingResponse(
+                    io.BytesIO(img_data),
+                    media_type="image/jpeg"
+                )
+            else:
+                raise HTTPException(status_code=404, detail="No hay imagen disponible para este evento")
+                
+    except Exception as e:
+        logger.error(f"Error obteniendo imagen del evento: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
 
 @app.get("/api/eco-mode")
 async def get_eco_mode():
@@ -1153,6 +1328,43 @@ async def camera_stream_websocket(websocket: WebSocket, camera_id: str):
                                     )
                                     logger.info(f"Alerta creada para {action['zone_id']}")
                                     
+                                    # Registrar evento en base de datos
+                                    try:
+                                        from backend.utils.event_logger import event_logger, EventTypes
+                                        zone_name = alert_manager.config['zones'].get(action['zone_id'], {}).get('name', action['zone_id'])
+                                        
+                                        # Capturar thumbnail del frame actual
+                                        thumbnail_base64 = None
+                                        image_path = None
+                                        
+                                        if frame is not None:
+                                            # Crear thumbnail para vista rápida
+                                            thumbnail_base64 = image_handler.capture_frame_thumbnail(frame)
+                                            
+                                            # Dibujar overlay con información del evento
+                                            event_info = {
+                                                'timestamp': datetime.now(),
+                                                'event_type': 'PUERTA ABIERTA',
+                                                'zone_id': zone_name
+                                            }
+                                            frame_with_overlay = image_handler.draw_event_overlay(frame, event_info)
+                                        
+                                        event_logger.log_event(
+                                            event_type=EventTypes.DOOR_OPEN,
+                                            event_name=f"{zone_name} abierta",
+                                            description=f"Puerta detectada abierta en {zone_name}",
+                                            zone_id=action['zone_id'],
+                                            severity="warning",
+                                            metadata={
+                                                'camera_id': camera_id,
+                                                'confidence': action['detection']['confidence']
+                                            },
+                                            thumbnail_base64=thumbnail_base64,
+                                            image_path=image_path
+                                        )
+                                    except Exception as e:
+                                        logger.error(f"Error registrando evento: {e}")
+                                    
                                     # NO enviar alerta inmediata - solo cuando expire el timer
                                     # if telegram_service.enabled:
                                     #     zone_name = alert_manager.config['zones'].get(action['zone_id'], {}).get('name', action['zone_id'])
@@ -1200,13 +1412,42 @@ async def camera_stream_websocket(websocket: WebSocket, camera_id: str):
                                     
                                     # Enviar notificación a Telegram de puerta cerrada (sin imagen)
                                     if telegram_service.enabled and (timers_to_cancel or not active_timers):
+                                        try:
+                                            zone_name = alert_manager.config['zones'].get(zone_id, {}).get('name', zone_id)
+                                            await telegram_service.send_alert(
+                                                zone_id=zone_id,
+                                                zone_name=zone_name,
+                                                detection_type='puerta_cerrada'
+                                                # NO incluir imagen en cierre
+                                            )
+                                        except Exception as e:
+                                            logger.error(f"Error enviando notificación de cierre a Telegram: {e}")
+                                            # No dejar que el error crashee el backend
+                                    
+                                    # Registrar evento de puerta cerrada
+                                    try:
+                                        from backend.utils.event_logger import event_logger, EventTypes
                                         zone_name = alert_manager.config['zones'].get(zone_id, {}).get('name', zone_id)
-                                        await telegram_service.send_alert(
+                                        
+                                        # Capturar thumbnail del frame actual
+                                        thumbnail_base64 = None
+                                        if frame is not None:
+                                            thumbnail_base64 = image_handler.capture_frame_thumbnail(frame)
+                                        
+                                        event_logger.log_event(
+                                            event_type=EventTypes.DOOR_CLOSE,
+                                            event_name=f"{zone_name} cerrada",
+                                            description=f"Puerta cerrada detectada en {zone_name}",
                                             zone_id=zone_id,
-                                            zone_name=zone_name,
-                                            detection_type='puerta_cerrada'
-                                            # NO incluir imagen en cierre
+                                            severity="info",
+                                            metadata={
+                                                'camera_id': camera_id,
+                                                'alarms_cancelled': len(timers_to_cancel)
+                                            },
+                                            thumbnail_base64=thumbnail_base64
                                         )
+                                    except Exception as e:
+                                        logger.error(f"Error registrando evento de cierre: {e}")
                         
                         # Actualizar estado del Modo Eco
                         if eco_manager:
@@ -1326,10 +1567,14 @@ async def timer_monitor():
 # ==================== ARRANQUE ====================
 
 if __name__ == "__main__":
+    # Respetar puerto fijo configurado
+    port = int(os.environ.get('YOMJAI_BACKEND_PORT', 8889))
+    logger.info(f"🚀 Iniciando backend en puerto fijo: {port}")
+    
     uvicorn.run(
         "main:app",
         host="0.0.0.0",
-        port=8889,
-        reload=True,
+        port=port,
+        reload=False,  # Desactivar reload para evitar problemas
         log_level="info"
     )

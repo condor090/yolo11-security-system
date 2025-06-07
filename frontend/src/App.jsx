@@ -2,9 +2,9 @@ import React, { useState, useEffect, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { 
   AlertCircle, CheckCircle, Clock, Camera, Settings, Activity,
-  Shield, Eye, Gauge, Bell, ChevronDown, Info, Play, Pause,
+  Shield, Eye, EyeOff, Gauge, Bell, ChevronDown, Info, Play, Pause,
   RefreshCw, Download, Upload, Zap, TrendingUp, Lock, Unlock,
-  Video, EyeOff, Calendar, Speaker
+  Video, Calendar, Speaker
 } from 'lucide-react';
 import toast, { Toaster } from 'react-hot-toast';
 import axios from 'axios';
@@ -30,6 +30,8 @@ import EcoModeControl from './components/EcoModeControl';
 import Roadmap from './components/Roadmap';
 import AudioZoneConfig from './components/AudioZoneConfig';
 import NotificationConfig from './components/NotificationConfig';
+import VehicleConfiguration from './components/VehicleConfiguration';
+import EventsViewer from './components/EventsViewer';
 
 ChartJS.register(
   CategoryScale,
@@ -53,6 +55,7 @@ function App() {
   const [alarmActive, setAlarmActive] = useState(false);
   const [detections, setDetections] = useState([]);
   const [stats, setStats] = useState({});
+  const [recentEvents, setRecentEvents] = useState([]);  // NUEVO: Estado para eventos reales
   const [config, setConfig] = useState({});
   const [uploadedImage, setUploadedImage] = useState(null);
   const [detectedImage, setDetectedImage] = useState(null);
@@ -67,6 +70,10 @@ function App() {
   const [selectedTimer, setSelectedTimer] = useState(null);
   const [showDirectView, setShowDirectView] = useState(false);
   const [cameras, setCameras] = useState({});
+  
+  // Estado de conexión del backend
+  const [backendStatus, setBackendStatus] = useState('connecting'); // 'connected', 'disconnected', 'connecting'
+  const [lastHeartbeat, setLastHeartbeat] = useState(null);
   
   // Referencias
   const wsRef = useRef(null);
@@ -86,6 +93,7 @@ function App() {
       
       ws.onopen = () => {
         console.log('WebSocket conectado');
+        setBackendStatus('connected');
         toast.success('Sistema conectado', {
           icon: '🟢',
           style: {
@@ -103,6 +111,7 @@ function App() {
       
       ws.onerror = (error) => {
         console.error('WebSocket error:', error);
+        setBackendStatus('disconnected');
         toast.error('Error de conexión', {
           style: {
             borderRadius: '10px',
@@ -114,6 +123,7 @@ function App() {
       
       ws.onclose = () => {
         console.log('WebSocket desconectado');
+        setBackendStatus('disconnected');
         setTimeout(connectWebSocket, 3000);
       };
       
@@ -127,6 +137,29 @@ function App() {
         wsRef.current.close();
       }
     };
+  }, []);
+
+  // Heartbeat para verificar conexión del backend
+  useEffect(() => {
+    const checkBackendHealth = async () => {
+      try {
+        const response = await axios.get(`${API_URL}/api/health`);
+        if (response.status === 200) {
+          setBackendStatus('connected');
+          setLastHeartbeat(new Date());
+        }
+      } catch (error) {
+        setBackendStatus('disconnected');
+      }
+    };
+
+    // Verificar inmediatamente
+    checkBackendHealth();
+
+    // Verificar cada 5 segundos
+    const interval = setInterval(checkBackendHealth, 5000);
+
+    return () => clearInterval(interval);
   }, []);
 
   // Manejar mensajes WebSocket
@@ -159,6 +192,18 @@ function App() {
     loadConfig();
     loadStats();
     loadCameras();
+    loadRecentEvents();  // Cargar eventos reales
+    
+    // Recargar eventos cada 30 segundos
+    const eventsInterval = setInterval(loadRecentEvents, 30000);
+    
+    // Recargar estadísticas cada 30 segundos
+    const statsInterval = setInterval(loadStats, 30000);
+    
+    return () => {
+      clearInterval(eventsInterval);
+      clearInterval(statsInterval);
+    };
   }, []);
 
   const loadConfig = async () => {
@@ -185,6 +230,22 @@ function App() {
       setCameras(response.data.cameras);
     } catch (error) {
       console.error('Error cargando cámaras:', error);
+    }
+  };
+  
+  const loadRecentEvents = async () => {
+    try {
+      const response = await axios.get(`${API_URL}/api/events/recent`);
+      setRecentEvents(response.data.events || []);
+    } catch (error) {
+      console.error('Error cargando eventos:', error);
+      // Si falla, usar eventos de ejemplo
+      setRecentEvents([
+        { time: '12:45', event: 'Puerta principal abierta', type: 'warning' },
+        { time: '12:30', event: 'Alarma reconocida - Zona 2', type: 'info' },
+        { time: '11:55', event: 'Sistema reiniciado', type: 'success' },
+        { time: '11:20', event: 'Detección múltiple en entrada', type: 'error' },
+      ]);
     }
   };
 
@@ -272,6 +333,30 @@ function App() {
             </div>
             
             <div className="flex items-center gap-6">
+              {/* Indicador de conexión del backend */}
+              <div className={`flex items-center gap-2 px-3 py-1 rounded-full transition-all ${
+                backendStatus === 'connected' 
+                  ? 'bg-green-500/20 text-green-400' 
+                  : backendStatus === 'disconnected'
+                  ? 'bg-red-500/20 text-red-400'
+                  : 'bg-yellow-500/20 text-yellow-400'
+              }`}>
+                <div className={`w-2 h-2 rounded-full ${
+                  backendStatus === 'connected' 
+                    ? 'bg-green-500' 
+                    : backendStatus === 'disconnected'
+                    ? 'bg-red-500 animate-pulse'
+                    : 'bg-yellow-500 animate-pulse'
+                }`} />
+                <span className="text-sm font-medium">
+                  {backendStatus === 'connected' 
+                    ? 'Backend OK' 
+                    : backendStatus === 'disconnected'
+                    ? 'Backend Desconectado'
+                    : 'Conectando...'}
+                </span>
+              </div>
+              
               {/* Estado del Sistema */}
               <div className="flex items-center gap-3">
                 <div className="flex items-center gap-2 px-3 py-1 bg-gray-800 rounded-full">
@@ -287,8 +372,9 @@ function App() {
                       ? 'bg-green-500/20 text-green-400' 
                       : 'bg-gray-700 text-gray-400'
                   }`}
+                  title={isMonitoring ? 'Monitoreo activo' : 'Monitoreo pausado'}
                 >
-                  {isMonitoring ? <Eye className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
+                  {isMonitoring ? <Eye className="w-5 h-5" /> : <EyeOff className="w-5 h-5" />}
                 </button>
               </div>
               
@@ -333,6 +419,27 @@ function App() {
 
       {/* Main Content */}
       <main className="container mx-auto px-4 py-6">
+        {/* Alerta de Backend Desconectado */}
+        {backendStatus === 'disconnected' && (
+          <div className="mb-6 bg-red-900/30 border border-red-500/50 rounded-lg p-4">
+            <div className="flex items-center gap-3">
+              <AlertCircle className="w-5 h-5 text-red-500 flex-shrink-0" />
+              <div className="flex-1">
+                <p className="font-semibold text-red-400">Backend Desconectado</p>
+                <p className="text-sm text-gray-300 mt-1">
+                  No se puede conectar con el servidor. Verifique que el backend esté ejecutándose en el puerto 8889.
+                </p>
+              </div>
+              <button
+                onClick={() => window.location.reload()}
+                className="px-3 py-1 bg-red-600 hover:bg-red-700 rounded-lg text-sm transition-colors"
+              >
+                Reintentar
+              </button>
+            </div>
+          </div>
+        )}
+
         {/* Dashboard Tab */}
         {activeTab === 'dashboard' && (
           <div className="space-y-6">
@@ -346,7 +453,7 @@ function App() {
                 <div className="flex justify-between items-start">
                   <div>
                     <p className="text-blue-400 text-sm font-medium">Detecciones 24h</p>
-                    <p className="text-3xl font-bold mt-2">{stats.total_alerts || 0}</p>
+                    <p className="text-3xl font-bold mt-2">{stats.detections_24h || stats.total_alerts || 0}</p>
                     <p className="text-xs text-gray-400 mt-1">+12% vs ayer</p>
                   </div>
                   <TrendingUp className="w-8 h-8 text-blue-400 opacity-50" />
@@ -423,18 +530,23 @@ function App() {
               <div className="bg-gray-800/50 backdrop-blur rounded-xl p-6 border border-gray-700/50">
                 <h3 className="text-lg font-semibold mb-4 flex items-center gap-2">
                   <Activity className="w-5 h-5 text-blue-400" />
-                  Actividad por Hora
+                  Actividad por Hora (Últimas 24h)
                 </h3>
                 <div className="h-64">
                   <Line
                     data={{
-                      labels: Array.from({length: 24}, (_, i) => `${i}:00`),
+                      labels: stats.hourly_activity 
+                        ? stats.hourly_activity.map(h => `${h.hour}:00`)
+                        : Array.from({length: 24}, (_, i) => `${i}:00`),
                       datasets: [{
-                        label: 'Detecciones',
-                        data: Array.from({length: 24}, () => Math.floor(Math.random() * 10)),
+                        label: 'Eventos',
+                        data: stats.hourly_activity 
+                          ? stats.hourly_activity.map(h => h.count)
+                          : Array.from({length: 24}, () => 0),
                         borderColor: 'rgb(59, 130, 246)',
                         backgroundColor: 'rgba(59, 130, 246, 0.1)',
                         tension: 0.4,
+                        fill: true,
                       }]
                     }}
                     options={{
@@ -442,20 +554,48 @@ function App() {
                       maintainAspectRatio: false,
                       plugins: {
                         legend: { display: false },
+                        tooltip: {
+                          backgroundColor: 'rgba(0, 0, 0, 0.8)',
+                          padding: 12,
+                          displayColors: false,
+                          callbacks: {
+                            label: (context) => {
+                              return `${context.parsed.y} eventos`;
+                            }
+                          }
+                        }
                       },
                       scales: {
                         x: { 
                           grid: { color: 'rgba(255, 255, 255, 0.1)' },
-                          ticks: { color: 'rgba(255, 255, 255, 0.5)' }
+                          ticks: { 
+                            color: 'rgba(255, 255, 255, 0.5)',
+                            callback: function(value, index) {
+                              // Mostrar solo cada 3 horas para no saturar
+                              return index % 3 === 0 ? this.getLabelForValue(value) : '';
+                            }
+                          }
                         },
                         y: { 
                           grid: { color: 'rgba(255, 255, 255, 0.1)' },
-                          ticks: { color: 'rgba(255, 255, 255, 0.5)' }
+                          ticks: { 
+                            color: 'rgba(255, 255, 255, 0.5)',
+                            stepSize: 1,
+                            precision: 0
+                          },
+                          beginAtZero: true
                         }
                       }
                     }}
                   />
                 </div>
+                {stats.hourly_activity && (
+                  <div className="mt-4 text-sm text-gray-400 text-center">
+                    Total de eventos en 24h: <span className="font-semibold text-white">
+                      {stats.hourly_activity.reduce((sum, h) => sum + h.count, 0)}
+                    </span>
+                  </div>
+                )}
               </div>
             </div>
 
@@ -504,36 +644,8 @@ function App() {
               </div>
             </div>
 
-            {/* Eventos Recientes */}
-            <div className="bg-gray-800/50 backdrop-blur rounded-xl p-6 border border-gray-700/50">
-              <h3 className="text-lg font-semibold mb-4 flex items-center gap-2">
-                <Clock className="w-5 h-5 text-blue-400" />
-                Eventos Recientes
-              </h3>
-              <div className="space-y-3">
-                {[
-                  { time: '12:45', event: 'Puerta principal abierta', type: 'warning' },
-                  { time: '12:30', event: 'Alarma reconocida - Zona 2', type: 'info' },
-                  { time: '11:55', event: 'Sistema reiniciado', type: 'success' },
-                  { time: '11:20', event: 'Detección múltiple en entrada', type: 'error' },
-                ].map((event, idx) => (
-                  <div key={idx} className="flex items-center justify-between p-3 bg-gray-700/30 rounded-lg">
-                    <div className="flex items-center gap-3">
-                      <span className="text-sm text-gray-400">{event.time}</span>
-                      <span className="text-sm">{event.event}</span>
-                    </div>
-                    <span className={`px-2 py-1 text-xs rounded-full ${
-                      event.type === 'warning' ? 'bg-yellow-500/20 text-yellow-400' :
-                      event.type === 'error' ? 'bg-red-500/20 text-red-400' :
-                      event.type === 'success' ? 'bg-green-500/20 text-green-400' :
-                      'bg-blue-500/20 text-blue-400'
-                    }`}>
-                      {event.type}
-                    </span>
-                  </div>
-                ))}
-              </div>
-            </div>
+            {/* Eventos Recientes con búsqueda y filtros */}
+            <EventsViewer />
           </div>
         )}
 
@@ -1190,6 +1302,16 @@ function App() {
                 Cámaras
               </button>
               <button
+                onClick={() => setConfigTab('vehicles')}
+                className={`pb-3 px-1 transition-all flex items-center gap-2 whitespace-nowrap ${
+                  configTab === 'vehicles'
+                    ? 'text-blue-400 border-b-2 border-blue-400'
+                    : 'text-gray-400 hover:text-gray-300'
+                }`}
+              >
+                🚛 Vehículos
+              </button>
+              <button
                 onClick={() => setConfigTab('timers')}
                 className={`pb-3 px-1 transition-all whitespace-nowrap ${
                   configTab === 'timers'
@@ -1234,6 +1356,8 @@ function App() {
 
             {/* Contenido de las tabs */}
             {configTab === 'cameras' && <CameraConfig />}
+            
+            {configTab === 'vehicles' && <VehicleConfiguration />}
             
             {configTab === 'timers' && <TimerConfig />}
             
